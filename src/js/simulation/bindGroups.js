@@ -8,8 +8,6 @@ export async function initBindGroups(state) {
     
     // Create all bind groups
     return {
-      // Terrain processing bind groups
-      ...createTerrainBindGroups(device, buffers, pipelines),
 
       // Cell marking bind groups
       ...createMarkingBindGroups(device, buffers, pipelines),
@@ -488,58 +486,6 @@ function createPCGBindGroups(device, buffers, pipelines) {
     computeMaxResidualPass1,
     computeMaxResidualPass2,
     applyPressure
-  };
-}
-
-// /**
-//  * Create terrain processing bind groups
-//  * @param {GPUDevice} device - WebGPU device
-//  * @param {Object} buffers - All simulation buffers
-//  * @param {Object} pipelines - All simulation pipelines
-//  * @returns {Object} Terrain processing bind groups
-//  */
-// function createTerrainBindGroups(device, buffers, pipelines) {
-//   // Create bind group for cubic interpolation
-//   const cubicInterpolate = device.createBindGroup({
-//     layout: pipelines.cubicInterpolate.layout,
-//     entries: [
-//       { binding: 0, resource: { buffer: buffers.terrain }},
-//       { binding: 1, resource: { buffer: buffers.highresTerrain }},
-//       { binding: 2, resource: { buffer: buffers.terrainParams }}
-//     ]
-//   });
-  
-//   // Create bind group for normals calculation
-//   const calculateTerrainNormals = device.createBindGroup({
-//     layout: pipelines.calculateTerrainNormals.layout,
-//     entries: [
-//       { binding: 0, resource: { buffer: buffers.highresTerrain }},
-//       { binding: 1, resource: { buffer: buffers.highresNormals }},
-//       { binding: 2, resource: { buffer: buffers.terrainParams }}
-//     ]
-//   });
-  
-//   return {
-//     cubicInterpolate,
-//     calculateTerrainNormals
-//   };
-// }
-
-function createTerrainBindGroups(device, buffers, pipelines) {
-  // Create bind group for terrain collision using the layout from pipelines
-  const terrainCollision = device.createBindGroup({
-    layout: pipelines.terrainCollision.layout,
-    entries: [
-      { binding: 0, resource: { buffer: buffers.particles.particlePosition } },
-      { binding: 1, resource: { buffer: buffers.particles.particlePositionPong } },
-      { binding: 2, resource: { buffer: buffers.particles.particleVelocity } },
-      { binding: 3, resource: { buffer: buffers.simParams } },
-      { binding: 4, resource: buffers.terrainTexture.createView() }
-    ]
-  });
-  
-  return {
-    terrainCollision
   };
 }
 

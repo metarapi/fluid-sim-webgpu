@@ -87,9 +87,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   // Only correct over-density (compressed regions)
   let compression = max(0.0, currentDensity - targetDensity);
 
+  // Correct both under-density and over-density
+  // let compression = abs(currentDensity - targetDensity);
+
   // Scale factor controls strength of correction
   // let correctionStrength = 0.5;
-  // let densityCorrection = correctionStrength * compression;
   let densityCorrection = (correctionStrength) * compression;
 
 

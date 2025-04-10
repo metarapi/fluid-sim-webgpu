@@ -39,14 +39,7 @@ struct SimParams {
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   let pid = global_id.x;
   if (pid >= params.particle_count) { return; }
-  
-
-
-  // Dummy read from highres to avoid unused variable warning
-  // let dummyN = highresNormals[0];
-  // let dummyT = highresTerrain[0];
-  // let dummyH = terrainParams.highres_terrain_count;
-
+ 
   let p1Pos = particlePosIn[pid];
   let cellX = u32(p1Pos.x * params.world_to_grid_x);
   let cellY = u32(p1Pos.y * params.world_to_grid_y);
@@ -57,14 +50,21 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   var pushCount = 0;
 
   // // Scale push factor by number of substeps (linear)
-  // let pushScale = 1.0 / f32(params.num_substeps);
+  // let pushScale = 1.00 / f32(params.num_substeps);
 
   // Scale push factor with exponential decay
-  let baseScale = 1.5;                                      // Start with stronger push
-  let decayRate = 0.5;                                    // Decay factor (0.5-0.8 works well)
-  let substepFactor = f32(params.current_substep) / f32(params.num_substeps);
-  let pushScale = baseScale * pow(decayRate, substepFactor * 4.0);
+  // let baseScale = 1.0;                                      // Start with stronger push
+  // let decayRate = 0.5;                                    // Decay factor (0.5-0.8 works well)
+  // let substepFactor = f32(params.current_substep) / f32(params.num_substeps);
+  // let pushScale = baseScale * pow(decayRate, substepFactor * 4.0);
   
+  let baseScale = 1.0;
+  let substepFactor = f32(params.current_substep) / f32(params.num_substeps);
+  let start = 0.0; 
+  let end = 0.9;   
+  let t = smoothstep(start, end, substepFactor);
+  let pushScale = baseScale * (1.0 - t);
+
   // Check neighboring cells
   for (var i = -1; i <= 1; i++) {
     for (var j = -1; j <= 1; j++) {
@@ -101,8 +101,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let pushX = dx * s;
         let pushY = dy * s;
         
-        accumulatedPushX -= pushX * 0.5;
-        accumulatedPushY -= pushY * 0.5;
+        accumulatedPushX -= pushX;
+        accumulatedPushY -= pushY;
 
         pushCount += 1;
       }
@@ -145,5 +145,47 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
   }
 
+  var jitterX = 0.0;
+  var jitterY = 0.0;
+
+  // Use PCG hash for high-quality random values
+  // Seed with particle ID, substep, and a frame counter if available
+  let seed = vec2<u32>(pid, params.current_substep);
+  let hash = pcg2d(seed);
+  
+  // Convert to normalized floats in [0,1)
+  let rnd_x = hash_to_float(hash.x);
+  let rnd_y = hash_to_float(hash.y);
+  
+  // Convert to [-1,1] range
+  let norm_x = rnd_x * 2.0 - 1.0;
+  let norm_y = rnd_y * 2.0 - 1.0;
+  
+  // Apply jitter that decreases with each substep
+  let jitter_scale = 0.001 * params.min_dist;
+  jitterX = norm_x * jitter_scale;
+  jitterY = norm_y * jitter_scale;
+
+  // Apply jitter to new position
+  newPos.x += jitterX;
+  newPos.y += jitterY;
+
   particlePosOut[pid] = newPos;
+}
+
+
+
+// PCG2D hash function for high-quality pseudo-random number generation
+fn pcg2d(p: vec2<u32>) -> vec2<u32> {
+    var v = p * 1664525u + 1013904223u;
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> vec2<u32>(16u);
+    v.x += v.y * 1664525u; v.y += v.x * 1664525u;
+    v ^= v >> vec2<u32>(16u);
+    return v;
+}
+
+// Convert PCG hash to normalized float in [0,1) range
+fn hash_to_float(hash: u32) -> f32 {
+    return f32(hash) / f32(0xFFFFFFFFu);
 }

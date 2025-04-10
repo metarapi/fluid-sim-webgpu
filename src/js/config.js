@@ -10,8 +10,8 @@ export function createConfig(options = {}) {
   // =========================================================
   const config = {
     // Grid dimensions (512×512 = 262,144 cells)
-      gridSizeX: options.gridSizeX || 512,
-      gridSizeY: options.gridSizeY || 512,
+      gridSizeX: options.gridSizeX || 256,
+      gridSizeY: options.gridSizeY || 256,
       
       // World dimensions
       lengthX: options.lengthX || 16.0,
@@ -22,7 +22,7 @@ export function createConfig(options = {}) {
       
       // Physics parameters
       pushApartSteps: options.pushApartSteps || 4,
-      minDistance: options.minDistance || 0.2,
+      minDistance: options.minDistance || 0.6,
     };
 
   // =========================================================
@@ -40,7 +40,7 @@ export function createConfig(options = {}) {
     config.gridToWorldY = config.lengthY / config.gridSizeY;
   
   // Override minDistance based on grid cell size
-  config.minDistance = config.gridToWorldX * 0.6;
+  config.minDistance = config.gridToWorldX * 1.0;
 
   // =========================================================
   // Prefix Sum Configuration

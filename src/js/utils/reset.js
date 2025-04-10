@@ -29,7 +29,7 @@ export async function resetSimulation(simState, newConfig = {}) {
     // 5. Restart simulation
     console.log("Restarting simulation...");
     const simControl = await runSimulation(simState, {
-      maxFrames: 5000,
+      maxFrames: Infinity,
       autoStart: false,
       skipRender: false
     });

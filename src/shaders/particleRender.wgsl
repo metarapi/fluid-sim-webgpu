@@ -23,7 +23,7 @@ fn vertexMain(
     output.color = vec4f(0.2, 0.4, 0.8, 0.8);
     
     // Convert particle world position to clip space
-    let worldPos = quadPosition * uniforms.particleSize*1.0 + particle;
+    let worldPos = quadPosition * uniforms.particleSize*0.5 + particle;
     let x = (worldPos.x / uniforms.worldSize.x) * 2.0 - 1.0;
     let y = (worldPos.y / uniforms.worldSize.y) * 2.0 - 1.0;
     

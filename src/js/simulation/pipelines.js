@@ -1,3 +1,5 @@
+import { getShaders } from './importShaders.js';
+
 /**
  * Initialize all simulation compute pipelines
  * @param {Object} state - Main simulation state object
@@ -7,7 +9,8 @@ export async function initPipelines(state) {
     const { device, config } = state;
 
     // Load all shader code first
-    const shaders = await loadShaders();
+    // const shaders = await loadShaders();
+    const shaders = await getShaders();
 
     // Create all pipelines
     const pipelines = {
@@ -21,7 +24,7 @@ export async function initPipelines(state) {
         ...await createParticlePipelines(device, shaders),
 
         // Terrain collision pipelines
-        ...await createTerrainCollisionPipelines(device, shaders),
+        // ...await createTerrainCollisionPipelines(device, shaders),
 
         // Prefix sum pipelines
         ...await createPrefixSumPipelines(device, shaders),
@@ -121,81 +124,6 @@ async function loadShaders() {
     return shaders;
 }
 
-// /**
-//  * Create terrain (pre)processing related pipelines
-//  * @param {GPUDevice} device - WebGPU device
-//  * @param {Object} shaders - Loaded shader code
-//  * @returns {Object} Terrain processing pipelines
-//   */
-// async function createTerrainProcessingPipelines(device, shaders) {
-//   // Create shader modules
-//   const cubicInterpolateModule = device.createShaderModule({
-//     code: shaders.cubicInterpolate
-//   });
-
-//   const calculateTerrainNormalsModule = device.createShaderModule({
-//     code: shaders.calculateTerrainNormals
-//   });
-
-//   // Create pipelines
-//   const cubicInterpolate = await device.createComputePipelineAsync({
-//     layout: 'auto',
-//     compute: { module: cubicInterpolateModule, entryPoint: 'main' }
-//   });
-
-//   const calculateTerrainNormals = await device.createComputePipelineAsync({
-//     layout: 'auto',
-//     compute: { module: calculateTerrainNormalsModule, entryPoint: 'main' }
-//   });
-
-//   return {
-//     cubicInterpolate: {
-//       pipeline: cubicInterpolate,
-//       layout: cubicInterpolate.getBindGroupLayout(0)
-//     },
-//     calculateTerrainNormals: {
-//       pipeline: calculateTerrainNormals,
-//       layout: calculateTerrainNormals.getBindGroupLayout(0)
-//     }
-//   };
-// }
-
-// /**
-//  * Create cell marking related pipelines
-//  * @param {GPUDevice} device - WebGPU device
-//  * @param {Object} shaders - Loaded shader code
-//  * @returns {Object} Marking pipelines
-//  */
-// async function createMarkingPipelines(device, shaders) {
-//     // Create shader modules
-//     const bresenhamModule = device.createShaderModule({ code: shaders.bresenhamLine });
-//     const markSolidModule = device.createShaderModule({ code: shaders.markSolid });
-//     const markLiquidModule = device.createShaderModule({ code: shaders.markLiquid });
-
-//     // Create pipelines
-//     const bresenham = device.createComputePipeline({
-//         layout: 'auto',
-//         compute: { module: bresenhamModule, entryPoint: 'main' }
-//     });
-
-//     const markSolid = device.createComputePipeline({
-//         layout: 'auto',
-//         compute: { module: markSolidModule, entryPoint: 'main' }
-//     });
-
-//     const markLiquid = device.createComputePipeline({
-//         layout: 'auto',
-//         compute: { module: markLiquidModule, entryPoint: 'main' }
-//     });
-
-//     // Return pipelines and their layouts
-//     return {
-//         bresenham: { pipeline: bresenham, layout: bresenham.getBindGroupLayout(0) },
-//         markSolid: { pipeline: markSolid, layout: markSolid.getBindGroupLayout(0) },
-//         markLiquid: { pipeline: markLiquid, layout: markLiquid.getBindGroupLayout(0) }
-//     };
-// }
-
 /**
  * Create cell marking related pipelines
  * @param {GPUDevice} device - WebGPU device
@@ -244,54 +172,54 @@ async function createMarkingPipelines(device, shaders) {
     };
 }
 
-  /**
-   * Create terrain collision related pipelines
-   * @param {GPUDevice} device - WebGPU device
-   * @param {Object} shaders - Loaded shader code
-   * @returns {Object} Terrain processing pipelines
-   */
-  async function createTerrainCollisionPipelines(device, shaders) {
-    // Create shader modules
-    const terrainCollisionModule = device.createShaderModule({
-        code: shaders.terrainCollision
-    });
+//   /**
+//    * Create terrain collision related pipelines
+//    * @param {GPUDevice} device - WebGPU device
+//    * @param {Object} shaders - Loaded shader code
+//    * @returns {Object} Terrain processing pipelines
+//    */
+//   async function createTerrainCollisionPipelines(device, shaders) {
+//     // Create shader modules
+//     const terrainCollisionModule = device.createShaderModule({
+//         code: shaders.terrainCollision
+//     });
 
-    // Create custom bind group layout for terrain collision
-    const terrainCollisionBindGroupLayout = device.createBindGroupLayout({
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },  // particlePos
-        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // particlePosNew
-        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // particleVel
-        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },  // simParams
-        { 
-          binding: 4, 
-          visibility: GPUShaderStage.COMPUTE, 
-          texture: {
-            sampleType: 'unfilterable-float',  // Critical for rgba32float textures
-            viewDimension: '2d'
-          }
-        }
-      ]
-    });
+//     // Create custom bind group layout for terrain collision
+//     const terrainCollisionBindGroupLayout = device.createBindGroupLayout({
+//       entries: [
+//         { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },  // particlePos
+//         { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // particlePosNew
+//         { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // particleVel
+//         { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },  // simParams
+//         { 
+//           binding: 4, 
+//           visibility: GPUShaderStage.COMPUTE, 
+//           texture: {
+//             sampleType: 'unfilterable-float',  // Critical for rgba32float textures
+//             viewDimension: '2d'
+//           }
+//         }
+//       ]
+//     });
 
-    // Create pipeline layout using the custom bind group layout
-    const terrainCollisionPipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [terrainCollisionBindGroupLayout]
-    });
+//     // Create pipeline layout using the custom bind group layout
+//     const terrainCollisionPipelineLayout = device.createPipelineLayout({
+//       bindGroupLayouts: [terrainCollisionBindGroupLayout]
+//     });
 
-    // Create pipeline using the custom layout
-    const terrainCollision = device.createComputePipeline({
-      layout: terrainCollisionPipelineLayout,
-      compute: { module: terrainCollisionModule, entryPoint: 'main' }
-    });
+//     // Create pipeline using the custom layout
+//     const terrainCollision = device.createComputePipeline({
+//       layout: terrainCollisionPipelineLayout,
+//       compute: { module: terrainCollisionModule, entryPoint: 'main' }
+//     });
 
-    return {
-      terrainCollision: {
-        pipeline: terrainCollision,
-        layout: terrainCollisionBindGroupLayout
-      }
-    };
-}
+//     return {
+//       terrainCollision: {
+//         pipeline: terrainCollision,
+//         layout: terrainCollisionBindGroupLayout
+//       }
+//     };
+// }
 
 /**
  * Create particle handling related pipelines

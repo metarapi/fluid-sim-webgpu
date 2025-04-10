@@ -186,22 +186,22 @@ export async function runMonolithicSimulationStep(state) {
       buffers.vGrid.size
     );
 
-    // // Extension passes - each extends one cell further
-    // const numExtensionPasses = 3; // Extend velocity field by 3 cells
-    // for (let pass = 0; pass < numExtensionPasses; pass++) {
-    //   // Each pass must be a separate compute dispatch
-    //   const extendUPass = encoder.beginComputePass();
-    //   extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
-    //   extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
-    //   extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
-    //   extendUPass.end();
+    // Extension passes - each extends one cell further
+    const numExtensionPasses = 3; // Extend velocity field by 3 cells
+    for (let pass = 0; pass < numExtensionPasses; pass++) {
+      // Each pass must be a separate compute dispatch
+      const extendUPass = encoder.beginComputePass();
+      extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
+      extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
+      extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
+      extendUPass.end();
       
-    //   const extendVPass = encoder.beginComputePass();
-    //   extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
-    //   extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
-    //   extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
-    //   extendVPass.end();
-    // }
+      const extendVPass = encoder.beginComputePass();
+      extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
+      extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
+      extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
+      extendVPass.end();
+    }
 
     // Apply external forces
     {

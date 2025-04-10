@@ -78,7 +78,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     }
     
     // Add a thin grid line at cell borders
-    let cellBorder = 0.05;
+    let cellBorder = 0.2;
     var edgeHighlight = 1.0;
     
     if (input.uv.x < cellBorder || input.uv.x > (1.0 - cellBorder) || 

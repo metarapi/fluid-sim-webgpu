@@ -122,7 +122,7 @@ function setupPhysicsSliders(simState) {
   });
   
   // Target Density
-  setupSlider('targetDensitySlider', 'targetDensityValue', 5.0, (value) => {
+  setupSlider('targetDensitySlider', 'targetDensityValue', 20.0, (value) => {
     // Write to offset 20 (fifth float, target_density)
     const densityBuffer = new Float32Array([value]);
     simState.device.queue.writeBuffer(simState.buffers.physParams, 20, densityBuffer);

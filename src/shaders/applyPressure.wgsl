@@ -71,12 +71,13 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let v_idx_top = (j + 1) * params.size_x + i;
   let v_idx_bottom = j * params.size_x + i;
   
-  // const STIFFNESS: f32 = 0.04; // Under-relaxation factor (0.6 is the limit at dt = 1/60)
-  let STIFFNESS = physicsParams.pressure_stiffness;
+  // const STIFFNESS: f32 = 0.5; // Under-relaxation factor (0.6 is the limit at dt = 1/60)
+  // let STIFFNESS = physicsParams.pressure_stiffness;
 
   let localDensity = densityGrid[idx];
+  // let localDensity = max(0.0, (physicsParams.target_density - densityGrid[idx])/physicsParams.target_density);
   // var scale = STIFFNESS * physicsParams.dt / (physicsParams.fluid_density * params.grid_to_world_x);
-  var scale = physicsParams.dt / (physicsParams.fluid_density * params.grid_to_world_x);
+  var scale = localDensity * physicsParams.dt / (physicsParams.fluid_density * params.grid_to_world_x);
 
   // Right face
   if (i < params.size_x - 1u && (cellType[idx] == LIQUID || cellType[idx + 1u] == LIQUID)) {

@@ -1,19 +1,25 @@
 # Fluid Simulation with WebGPU
 
-This project implements a high-performance fluid simulation using WebGPU. It leverages modern GPU compute capabilities to simulate fluid dynamics in real-time, with support for particle-based and grid-based rendering.
+This project is a browser-based fluid simulation using WebGPU. It supports both particle-based and grid-based rendering modes. While it's functional and visually interesting, it's not fully optimized and performance will vary depending on your GPU and browser.
 
 ## Features
 
-- **WebGPU-based Simulation**: Utilizes WebGPU for high-performance compute operations.
-- **Particle and Grid Rendering**: Switch between particle-based and grid-based visualizations.
-- **Dynamic Configuration**: Adjust grid size and particle count dynamically.
-- **Interactive Controls**: Start, pause, step, and toggle simulation modes.
-- **Prefix Sum and PCG Solver**: Implements advanced algorithms for efficient simulation.
+- **WebGPU Compute**: Uses WebGPU to run simulation steps on the GPU.
+- **Two Rendering Modes**: Switch between particle-based and grid-based visualization.
+- **Dynamic Configuration**: Adjust grid size and particle count in real time.
+- **Interactive Controls**: Start, pause, step the simulation, and toggle rendering modes.
+- **Prefix Sum & PCG Solver**: Implements a basic prefix sum and pressure solver for fluid dynamics.
 
-## Prerequisites
+## Tech Stack
 
-- **Node.js**
-- **WebGPU Support**
+This project uses:
+
+- [TailwindCSS](https://tailwindcss.com) for styling
+- [Vite](https://vitejs.dev) for bundling and development
+- [Node.js](https://nodejs.org) as a runtime environment
+- [`vite-plugin-glsl`](https://www.npmjs.com/package/vite-plugin-glsl) to load `.wgsl` shader files
+- [Bootstrap Icons](https://icons.getbootstrap.com) for user interface icons
+- [flyonui](https://flyonui.com/), used solely for custom scrollbar styling
 
 ## Installation
 
@@ -40,56 +46,60 @@ This project implements a high-performance fluid simulation using WebGPU. It lev
    http://localhost:3000/
    ```
 
-3. Use the dropdown menus to adjust grid size and particle count dynamically.
+3. Use the interface to adjust parameters like grid size and particle count, and to switch between rendering modes.
 
 ## Project Structure
 
-- **`src/js/simulation`**: Core simulation logic, including buffer initialization and simulation steps.
-- **`src/js/renderer`**: Rendering logic for particles and grids.
-- **`src/js/config.js`**: Configuration generation for the simulation.
-- **`src/main.js`**: Entry point for initializing the simulation.
-- **`src/server.js`**: Simple HTTP server for serving the application.
-- **`vite.config.js`**: Vite configuration for development and build.
+* `src/js/simulation`: Core simulation logic, buffer initialization, and compute steps.
+* `src/js/renderer`: Handles visual output for particles and grids.
+* `src/js/config.js`: Simulation configuration generator.
+* `src/main.js`: Application entry point.
+* `src/server.js`: Simple local server.
+* `vite.config.js`: Configuration for Vite.
 
 ## Configuration
 
-You can customize the simulation by modifying the `createConfig` function in `src/js/config.js`. Key parameters include:
+Simulation parameters can be modified in the `createConfig` function inside `src/js/config.js`. Key parameters include:
 
-- `gridSizeX` and `gridSizeY`: Grid dimensions.
-- `lengthX` and `lengthY`: World dimensions.
-- `particleCount`: Number of particles in the simulation.
-- `pushApartSteps`: Number of steps for particle separation.
+* `gridSizeX`, `gridSizeY`: Grid resolution.
+* `lengthX`, `lengthY`: World size.
+* `particleCount`: Total number of particles.
+* `pushApartSteps`: Number of separation steps between particles.
 
 ## Controls
 
-- **Start/Pause**: Toggle the simulation.
-- **Step**: Run a single simulation step.
-- **Switch Renderer**: Switch between particle and grid rendering.
+* **Start/Pause**: Starts or pauses the simulation loop.
+* **Step**: Runs a single simulation step.
+* **Switch Renderer**: Toggles between grid and particle rendering.
 
 ## Building for Production
 
-To build the project for production, run:
+To generate a production build:
+
 ```bash
 npm run build
 ```
 
-The output will be in the `dist` directory.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+The optimized output will be in the `dist` directory.
 
 ## Acknowledgments
 
-- **WebGPU**: For enabling high-performance GPU compute in the browser.
-- **TailwindCSS**: For styling the application.
-- **Bootstrap Icons**: For UI icons.
+This project builds upon the work and inspiration from several individuals:
+
+* **Sebastian Lague** — for his inspiring fluid simulation videos
+* **Matthias Müller** — for his PIC/FLIP research and tutorials (https://github.com/matthias-research/pages/tree/master/tenMinutePhysics)
+* **Rama C. Hoetzlein** — for GPU sorting logic used as a reference (https://github.com/ramakarl/fluids3)
+* **Emmanuel Roche** — for his WGSL prefix sum implementations and examples (https://github.com/roche-emmanuel/nervland_adventures)
+* **Robert Bridson** — for *Fluid Simulation for Computer Graphics*, which provided detailed theoretical background
 
 ## Troubleshooting
 
-If you encounter issues:
-- Ensure your browser supports WebGPU.
-- Check the console for error messages.
-- Verify that all dependencies are installed.
+* Ensure your browser supports WebGPU (Chrome Canary or recent versions of Chromium-based browsers).
+* Check the developer console for error messages.
+* Make sure all dependencies are installed correctly.
 
-For further assistance, feel free to open an issue on the repository.
+If you're stuck, feel free to open an issue in the repository.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more information.

@@ -27,7 +27,9 @@ async function loadTerrainData(config, scaleFactor = 0.5) {
   const { lengthX, lengthY } = config;
   
   try {
-    const response = await fetch('src/assets/hill_map.csv');
+    // Use URL constructor for proper path resolution
+    const csvUrl = new URL('../../assets/hill_map.csv', import.meta.url).href;
+    const response = await fetch(csvUrl);
     if (!response.ok) {
       throw new Error(`Failed to load terrain data: ${response.status}`);
     }
@@ -46,6 +48,7 @@ async function loadTerrainData(config, scaleFactor = 0.5) {
     };
     
   } catch (error) {
+    console.error("Error loading terrain data:", error);
     console.warn("Using fallback terrain (flat ground)");
     
     // Create minimal terrain (flat ground)

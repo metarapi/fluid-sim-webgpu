@@ -48,43 +48,6 @@ export function clearResources(simState) {
   }
 }
 
-/**
- * Set up simulation components
- * @param {Object} simState - Simulation state
- * @param {Object} config - Configuration options
- * @returns {Promise<Object>} Simulation controller
- */
-// export async function setupSimulation(simState, config = {}) {
-//   // Set up configuration
-//   simState.config = createConfig(config);
-  
-//   // Initialize components
-//   console.log("Setting up buffers...");
-//   simState.buffers = await initBuffers(simState);
-  
-//   console.log("Setting up pipelines...");
-//   simState.pipelines = await initPipelines(simState);
-  
-//   console.log("Setting up bind groups...");
-//   simState.bindGroups = await initBindGroups(simState);
-  
-//   // Run simulation
-//   console.log("Starting simulation...");
-//   const simControl = await runSimulation(simState, {
-//     maxFrames: 5000,
-//     autoStart: false,
-//     skipRender: false
-//   });
-  
-//   // Update global references
-//   window.simControl = simControl;
-  
-//   // Set up UI
-//   setupUI(simState, createUICallbacks(simState, simControl));
-  
-//   return simControl;
-// }
-
 export async function setupSimulation(simState, config = {}) {
     // Create configuration and initialize components
     simState.config = createConfig(config);
@@ -98,7 +61,7 @@ export async function setupSimulation(simState, config = {}) {
     
     // Create controller
     const controller = new SimulationController(simState, renderer, {
-      maxFrames: 5000
+      maxFrames: Infinity
     });
     
     // Store controller reference

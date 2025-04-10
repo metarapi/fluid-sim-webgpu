@@ -115,18 +115,6 @@ async function initPhysicsParams(device, config) {
   dataView.setFloat32(offset, -9.81, true); offset += 4;        // gravity_y  #4
   // dataView.setFloat32(offset, 0.0, true); offset += 4;        // gravity_y
 
-  // // Time step
-  // dataView.setFloat32(offset, 1/60, true); offset += 4;          // dt
-
-  // // Pressure solver iterations
-  // dataView.setUint32(offset, 50, true); offset += 4;            // pressure_iterations
-
-  // // Fluid density (not in kg/m³)
-  // dataView.setFloat32(offset, 1.0, true); offset += 4;         // density (water)
-
-  // // Padding to meet alignment requirements
-  // dataView.setFloat32(offset, 0.0, true)
-
   // Time step
   dataView.setFloat32(offset, 1/60, true); offset += 4;          // dt  #8
 
@@ -135,7 +123,7 @@ async function initPhysicsParams(device, config) {
 
   // Fluid density parameters
   dataView.setFloat32(offset, 1.0, true); offset += 4;           // fluid_density (not in kg/m³)  #16
-  dataView.setFloat32(offset, 5.0, true); offset += 4;           // target_density  #20
+  dataView.setFloat32(offset, 20.0, true); offset += 4;          // target_density  #20
   dataView.setFloat32(offset, 1.0, true); offset += 4;           // density_correction_strength #24
 
   // Viscosity and PIC/FLIP
@@ -173,7 +161,6 @@ async function initParticles(device, config) {
     const positionData = new Float32Array(particleCount * 2);  // x,y
     const velocityData = new Float32Array(particleCount * 2);  // u,v
     const particleVelocityPongData = new Float32Array(particleCount * 2);  // prev_u,prev_v
-    // const currentIteratonData = new Uint32Array(Math.ceil(particleCount / 256)).fill(0); // Each workgroup has its own iteration count
     
     // Calculate grid dimensions (assuming particleCount has an integer square root)
     const side = Math.sqrt(particleCount);
@@ -233,24 +220,17 @@ async function initParticles(device, config) {
       size: particleVelocityPongData.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
-
-    // const currentIterationBuffer = device.createBuffer({
-    //   size: currentIteratonData.byteLength,
-    //   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    // });
-    
+   
     device.queue.writeBuffer(particlePosition, 0, positionData);
     device.queue.writeBuffer(particlePositionPong, 0, positionData);
     device.queue.writeBuffer(particleVelocity, 0, velocityData);
     device.queue.writeBuffer(particleVelocityPong, 0, particleVelocityPongData);
-    // device.queue.writeBuffer(currentIterationBuffer, 0, currentIteratonData);
     
     return {
       particlePosition,
       particlePositionPong,
       particleVelocity,
       particleVelocityPong,
-      // currentIteration: currentIterationBuffer,
     };
   }
 

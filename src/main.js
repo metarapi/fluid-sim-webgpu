@@ -15,8 +15,8 @@ const simState = {
 async function init() {
   try {
     await initializeSimulation(simState, {
-      gridSizeX: 512, 
-      gridSizeY: 512,
+      gridSizeX: 256, 
+      gridSizeY: 256,
       lengthX: 8.0,
       lengthY: 8.0, 
       particleCount: 262144/2,

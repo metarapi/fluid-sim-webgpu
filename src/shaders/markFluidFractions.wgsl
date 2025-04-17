@@ -1,9 +1,3 @@
-// Constants for cell types.
-const SOLID: u32 = 2u;
-const AIR: u32 = 1u;
-
-const VOLUME_FRACTION_THRESHOLD: f32 = 0.5; // Bridson recommends 0.1, but 0.5 appars to be more stable (p. 95)
-
 struct SimParams {
     // Grid physical dimensions
     length_x: f32,      // Physical width of the grid (world units)
@@ -30,7 +24,7 @@ struct SimParams {
     upscaled_terrain_count: u32,
 };
 
-@group(0) @binding(0) var<storage, read_write> grid: array<u32>;  
+@group(0) @binding(0) var terrainTexture: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> params: SimParams;
 @group(0) @binding(2) var<storage, read_write> volumeFractions: array<f32>;
 
@@ -45,42 +39,37 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let y = index / params.size_x;
     let x = index % params.size_x;
 
-    // Border cells: force to SOLID
+    // Border cells: force to 0.0 (solid)
     if (x == 0u || y == 0u || x == params.size_x - 1u || y == params.size_y - 1u) {
-        grid[index] = SOLID;
+        volumeFractions[index] = 0.0;
         return;
     }
 
-    // Default to AIR if not already SOLID
-    if (grid[index] != SOLID) {
-        grid[index] = AIR;
+    // Cell world-space bounds
+    let cell_left = f32(x) * params.grid_to_world_x;
+    let cell_bottom = f32(y) * params.grid_to_world_y;
+    let cell_top = cell_bottom + params.grid_to_world_y;
+
+    // Multi-sample terrain height across cell width
+    let numSamples = 4u;
+    var fluidFraction = 0.0;
+    for (var s = 0u; s < numSamples; s = s + 1u) {
+        let sample_x = cell_left + (f32(s) + 0.5) * params.grid_to_world_x / f32(numSamples);
+        let u = clamp(sample_x / params.length_x, 0.0, 0.99);
+        let pixel_x = u32(u * f32(params.upscaled_terrain_count - 1u));
+        let terrainData = textureLoad(terrainTexture, vec2<u32>(pixel_x, 0u), 0);
+        let terrainHeight = terrainData.r;
+
+        // Compute fluid fraction for this sample
+        var sampleFraction = 1.0;
+        if (terrainHeight > cell_bottom && terrainHeight < cell_top) {
+            sampleFraction = (cell_top - terrainHeight) / params.grid_to_world_y;
+        } else if (terrainHeight >= cell_top) {
+            sampleFraction = 0.0;
+        }
+        fluidFraction = fluidFraction + sampleFraction;
     }
+    fluidFraction = fluidFraction / f32(numSamples);
 
-    let fluidFraction = volumeFractions[index];
-
-    // Compute neighbor indices
-    let idx_right  = index + 1u;
-    let idx_left   = index - 1u;
-    let idx_top    = index + params.size_x;
-    let idx_bottom = index - params.size_x;
-
-    // Compute face fractions
-    let frac_right  = min(fluidFraction, volumeFractions[idx_right]);
-    let frac_left   = min(fluidFraction, volumeFractions[idx_left]);
-    let frac_top    = min(fluidFraction, volumeFractions[idx_top]);
-    let frac_bottom = min(fluidFraction, volumeFractions[idx_bottom]);
-
-    // Mark as SOLID if all face fractions are below threshold
-    if (frac_right < VOLUME_FRACTION_THRESHOLD &&
-        frac_left < VOLUME_FRACTION_THRESHOLD &&
-        frac_top < VOLUME_FRACTION_THRESHOLD &&
-        frac_bottom < VOLUME_FRACTION_THRESHOLD) {
-        grid[index] = SOLID;
-        return;
-    }
-
-    // Otherwise, mark as SOLID if the cell's own volume fraction is below threshold
-    if (fluidFraction < VOLUME_FRACTION_THRESHOLD) {
-        grid[index] = SOLID;
-    }
+    volumeFractions[index] = fluidFraction;
 }

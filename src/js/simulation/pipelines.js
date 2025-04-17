@@ -53,6 +53,7 @@ async function loadShaders() {
     // Use camelCase names directly for shader files
     const shaderPaths = [
         // Cell marking
+        'markFluidFractions',
         'markSolid',
         'markLiquid',
         'particleToCellMapping',
@@ -68,6 +69,7 @@ async function loadShaders() {
         'particleToGridV',
         'addAccelerationAndDirichletU',
         'addAccelerationAndDirichletV',
+        'applyViscosity',
         'extendVelocityU',
         'extendVelocityV',
         //Density calculation
@@ -132,26 +134,62 @@ async function loadShaders() {
  */
 async function createMarkingPipelines(device, shaders) {
     // Create shader modules
+    const markFluidFractionsModule = device.createShaderModule({ code: shaders.markFluidFractions });
     const markSolidModule = device.createShaderModule({ code: shaders.markSolid });
     const markLiquidModule = device.createShaderModule({ code: shaders.markLiquid });
 
+    // // Create the bind group layout
+    // const markSolidBindGroupLayout = device.createBindGroupLayout({
+    //   entries: [
+    //     { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // cellType array
+    //     { binding: 1, visibility: GPUShaderStage.COMPUTE, texture: 
+    //       {
+    //         sampleType: 'unfilterable-float',
+    //         viewDimension: '2d'
+    //       }
+    //     },
+    //     {binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },  // SimParams uniform
+    //     {binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // volumeFractions
+    //   ]
+    // });
+
     // Create the bind group layout
-    const markSolidBindGroupLayout = device.createBindGroupLayout({
+    const markFluidFractionsBindGroupLayout = device.createBindGroupLayout({
       entries: [
-        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // cellType array
-        { binding: 1, visibility: GPUShaderStage.COMPUTE, texture: 
+        {binding: 0, visibility: GPUShaderStage.COMPUTE, texture: 
           {
             sampleType: 'unfilterable-float',
             viewDimension: '2d'
           }
         },
-        {binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' }},  // SimParams uniform
+        {binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },  // SimParams uniform
+        {binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // volumeFractions
       ]
     });
+
+    // Create the bind group layout
+    const markSolidBindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }, // cellType array
+        {binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },  // SimParams uniform
+        {binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },  // volumeFractions
+      ]
+    });
+
     
+    
+    const markFluidFractionsPipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [markFluidFractionsBindGroupLayout]
+    });
+
     // First create a pipeline layout using the bind group layout
     const markSolidPipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [markSolidBindGroupLayout]
+    });
+
+    const markFluidFractionsPipeline = device.createComputePipeline({
+        layout: markFluidFractionsPipelineLayout,
+        compute: { module: markFluidFractionsModule, entryPoint: 'main' }
     });
 
     // Then use the pipeline layout when creating the pipeline
@@ -167,6 +205,7 @@ async function createMarkingPipelines(device, shaders) {
 
     // Return pipelines and their layouts
     return {
+        markFluidFractions: { pipeline: markFluidFractionsPipeline, layout: markFluidFractionsBindGroupLayout },
         markSolid: { pipeline: markSolid, layout: markSolidBindGroupLayout },
         markLiquid: { pipeline: markLiquid, layout: markLiquid.getBindGroupLayout(0) }
     };
@@ -260,7 +299,9 @@ async function createParticlePipelines(device, shaders) {
             sampleType: 'unfilterable-float',
             viewDimension: '2d'
           }
-        }
+        },
+        { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // particleVelIn
+        { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },           // particleVelOut
       ]
     });
 
@@ -430,6 +471,10 @@ async function createFluidPipelines(device, shaders) {
         code: shaders.addAccelerationAndDirichletV
     });
 
+    const applyViscosityModule = device.createShaderModule({
+        code: shaders.applyViscosity
+    });    
+
     // Create pipelines using auto layout
     const particleToGridU = await device.createComputePipelineAsync({
         layout: 'auto',
@@ -466,6 +511,11 @@ async function createFluidPipelines(device, shaders) {
         compute: { module: addAccelerationAndDirichletVModule, entryPoint: 'main' }
     });
 
+    const applyViscosity = await device.createComputePipelineAsync({
+        layout: 'auto',
+        compute: { module: applyViscosityModule, entryPoint: 'main' }
+    });
+
     return {
         particleToGridU: {
             pipeline: particleToGridU,
@@ -494,6 +544,10 @@ async function createFluidPipelines(device, shaders) {
         addAccelerationAndDirichletV: {
             pipeline: addAccelerationAndDirichletV,
             layout: addAccelerationAndDirichletV.getBindGroupLayout(0)
+        },
+        applyViscosity: {
+            pipeline: applyViscosity,
+            layout: applyViscosity.getBindGroupLayout(0)
         }
     };
 }

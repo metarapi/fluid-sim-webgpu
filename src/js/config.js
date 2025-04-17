@@ -105,8 +105,8 @@ export function createConfig(options = {}) {
     pcg: {
       workgroupCount: pcgWorkgroupCount,
       tolerance: options.pcgTolerance || 1e-5,
-      maxIterations: options.pcgMaxIterations || 250,
-      stiffness: options.pressureStiffness || 0.6,
+      maxIterations: options.pcgMaxIterations || 500,
+      stiffness: options.pressureStiffness || 0.01,
     }
   };
 }

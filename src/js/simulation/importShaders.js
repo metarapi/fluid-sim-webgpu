@@ -89,6 +89,7 @@
 
 export async function getShaders() {
     const shaderPaths = [
+      'markFluidFractions',
       'markSolid',
       'markLiquid',
       'particleToCellMapping',
@@ -105,6 +106,7 @@ export async function getShaders() {
       'addAccelerationAndDirichletV',
       'extendVelocityU',
       'extendVelocityV',
+      'applyViscosity',
       'calculateDensity',
       'applyLaplacian',
       'applyPressure',

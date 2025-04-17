@@ -17,26 +17,28 @@
   </style>
 </head>
 
-<body class="bg-linear-to-r/oklab from-blue-950 to-indigo-700 text-gray-800h-screen flex flex-col overflow-hidden">
 
-  <nav class="bg-transparent text-white p-4 shadow-md">
+
+<body class="bg-black-rock-950 text-regent-gray-100 h-screen flex flex-col overflow-hidden">
+
+  <nav class="bg-black-rock-950 text-regent-gray-100 p-4 shadow-md border-b border-regent-gray-800">
     <div class="w-full flex items-center justify-between px-4">
       <!-- Menu Button (Left) -->
       <div>
-        <button class="text-gray-300 hover:text-white focus:outline-none p-2 rounded-md" id="sidebarToggle">
+        <button class="text-regent-gray-300 hover:text-regent-gray-100 focus:outline-none p-2" id="sidebarToggle">
           <i class="bi bi-chevron-left text-xl transition-transform duration-300" id="toggleIcon"></i>
         </button>
       </div>
 
       <!-- Title (Center) -->
       <div class="absolute left-1/2 transform -translate-x-1/2">
-        <span class="text-xl font-semibold whitespace-nowrap">PIC/FLIP WebGPU Fluid Sim</span>
+        <span class="text-xl font-semibold whitespace-nowrap text-seagull-400">PIC/FLIP WebGPU Fluid Sim</span>
       </div>
 
       <!-- GitHub Icon (Right) -->
       <div>
         <a href="https://github.com/metarapi/fluid-sim-webgpu"
-          class="text-white hover:text-gray-300 transition-colors p-2" target="_blank" rel="noopener noreferrer">
+          class="text-regent-gray-300 hover:text-regent-gray-100 transition-colors p-2" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-github text-2xl"></i>
         </a>
       </div>
@@ -46,170 +48,171 @@
   <div class="flex flex-1 overflow-hidden">
     <!-- Sidebar -->
     <div id="sidebar"
-      class="w-80 bg-transparent text-white p-4 transition-all duration-300 ease-in-out overflow-y-auto shadow-lg h-full">
-      <!-- <h1 class="text-xl font-bold mb-3 text-center text-indigo-300">Fluid Simulation Controls</h1> -->
+      class="w-80 bg-black-rock-950 text-regent-gray-100 p-4 transition-all duration-300 ease-in-out overflow-y-auto shadow-lg h-full border-r border-regent-gray-800">
 
-      <!-- Control Buttons -->
+      <!-- Control Buttons -->  
       <div class="grid grid-cols-2 gap-2 mb-2">
         <button id="startButton"
-          class="bg-slate-800 hover:bg-indigo-500 focus:ring-2 focus:ring-slate-400 focus:outline-none text-white py-2 px-4 rounded-md transition-colors shadow-xs font-medium">Start</button>
+          class="bg-regent-gray-600 text-black-rock-950 py-2 px-4 hover:bg-regent-gray-300 active:scale-105 transition-all duration-75 font-medium">Start</button>
         <button id="pauseButton"
-          class="bg-slate-800 hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-white py-2 px-4 rounded-md transition-colors shadow-xs font-medium">Pause</button>
+          class="bg-regent-gray-600 text-black-rock-950 py-2 px-4 hover:bg-regent-gray-300 active:scale-105 transition-all duration-75 font-medium">Pause</button>
         <button id="stepButton"
-          class="bg-slate-800 hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-white py-2 px-4 rounded-md transition-colors shadow-xs font-medium">Step</button>
+          class="bg-regent-gray-600 text-black-rock-950 py-2 px-4 hover:bg-regent-gray-300 active:scale-105 transition-all duration-75 font-medium">Step</button>
         <button id="resetButton"
-          class="bg-rose-600 hover:bg-rose-700 focus:ring-2 focus:ring-rose-500 focus:outline-none text-white py-2 px-4 rounded-md transition-colors shadow-xs font-medium">Reset</button>
+          class="bg-regent-gray-600 text-black-rock-950 py-2 px-4 hover:bg-brick-red-400 active:scale-105 transition-all duration-75 font-medium">Reset</button>
       </div>
 
       <!-- View Controls -->
-      <div class="view-controls mb-2 bg-slate-800 p-3 rounded-lg">
-        <p class="text-xs font-medium text-gray-300 mb-2">View Mode</p>
+      <div class="view-controls mb-2 border border-regent-gray-800 p-3">
+        <p class="text-xs font-medium text-regent-gray-300 mb-2">View Mode</p>
         <div class="flex space-x-4">
           <label class="inline-flex items-center cursor-pointer">
             <input type="radio" name="view-mode" id="particleViewRadio" checked
-              class="form-radio text-indigo-600 focus:ring-indigo-500 h-4 w-4">
-            <span class="ml-2 text-xs">Particle View</span>
+              class="form-radio text-seagull-400 focus:ring-seagull-400/50 h-4 w-4">
+            <span class="ml-2 text-xs text-regent-gray-100">Particle View</span>
           </label>
           <label class="inline-flex items-center cursor-pointer">
             <input type="radio" name="view-mode" id="gridViewRadio"
-              class="form-radio text-indigo-600 focus:ring-indigo-500 h-4 w-4">
-            <span class="ml-1 text-xs">Density Grid</span>
+              class="form-radio text-seagull-400 focus:ring-seagull-400/50 h-4 w-4">
+            <span class="ml-1 text-xs text-regent-gray-100">Density Grid</span>
           </label>
         </div>
       </div>
 
-      <!-- Slider Controls -->
-
       <!-- Particle Count and Grid Size Dropdowns -->
       <div class="relative inline-block w-full text-left mb-3">
-        <label for="gridSizeSelect" class="block text-sm font-medium text-gray-300 mb-1">Grid Size</label>
+        <label for="gridSizeSelect" class="block text-sm font-medium text-regent-gray-300 mb-1">Grid Size</label>
         <button id="gridDropdownButton" type="button"
-          class="inline-flex justify-between items-center w-full rounded-md border border-gray-700 shadow-sm px-4 py-2 bg-gray-800 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          class="inline-flex justify-between items-center w-full border border-regent-gray-800 px-4 py-2 bg-black-rock-950 text-sm font-medium text-regent-gray-100 hover:border-seagull-800 transition-all duration-75">
           <span id="gridDropdownSelected">256×256</span>
           <i class="bi bi-chevron-down ml-2"></i>
         </button>
 
         <div id="gridDropdownMenu"
-          class="z-10 hidden absolute mt-1 w-full rounded-md bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-          <ul class="py-1 text-sm text-white" role="menu">
-            <!-- <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800">128×128</button></li> -->
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800">256×256</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800">512×512</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800">1024×1024
-                <i class="bi bi-exclamation-diamond text-yellow-400"></i>
+          class="z-10 hidden absolute mt-1 w-full bg-black-rock-950 shadow-lg border border-regent-gray-800 focus:outline-none">
+          <ul class="py-1 text-sm text-regent-gray-100" role="menu">
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900">256×256</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900">512×512</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900">1024×1024
+                <i class="bi bi-exclamation-diamond text-red-400"></i>
               </button></li>
           </ul>
         </div>
       </div>
 
       <div class="relative inline-block w-full text-left mb-3">
-        <label for="particleCountSelect" class="block text-sm font-medium text-gray-300 mb-1">Particle Count</label>
+        <label for="particleCountSelect" class="block text-sm font-medium text-regent-gray-300 mb-1">Particle Count</label>
         <button id="particleDropdownButton" type="button"
-          class="inline-flex justify-between items-center w-full rounded-md border border-gray-700 shadow-sm px-4 py-2 bg-gray-800 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          class="inline-flex justify-between items-center w-full border border-regent-gray-800 px-4 py-2 bg-black-rock-950 text-sm font-medium text-regent-gray-100 hover:border-seagull-800 transition-all duration-75">
           <span id="particleDropdownSelected">131,072</span>
           <i class="bi bi-chevron-down ml-2"></i>
         </button>
 
         <div id="particleDropdownMenu"
-          class="z-10 hidden absolute mt-1 w-full rounded-md bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-          <ul class="py-1 text-sm text-white" role="menu">
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="32768">32,768</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="65536">65,536</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="131072">131,072</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="262144">262,144</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="524288">524,288</button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="1048576">1,048,576
+          class="z-10 hidden absolute mt-1 w-full bg-black-rock-950 shadow-lg border border-regent-gray-800 focus:outline-none">
+          <ul class="py-1 text-sm text-regent-gray-100" role="menu">
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="32768">32,768</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="65536">65,536</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="131072">131,072</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="262144">262,144</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="524288">524,288</button></li>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="1048576">1,048,576
                 <i class="bi bi-exclamation-diamond text-yellow-400"></i>
               </button></li>
-            <li><button class="w-full text-left px-4 py-2 hover:bg-slate-800" data-value="2097152">2,097,152
-                <i class="bi bi-exclamation-diamond text-red-500"></i>
+            <li><button class="w-full text-left px-4 py-2 hover:bg-regent-gray-900" data-value="2097152">2,097,152
+                <i class="bi bi-exclamation-diamond text-red-400"></i>
               </button></li>
           </ul>
         </div>
       </div>
 
-      <!-- Gravity -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <!-- Slider Groups -->
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="gravitySlider" class="text-xs font-medium text-gray-300">Gravity</label>
-          <span id="gravityValue" class="text-xs font-mono bg-gray-900 px-2 rounded">-9.81</span>
+          <label for="gravitySlider" class="text-xs font-medium text-regent-gray-300">Gravity</label>
+          <span id="gravityValue" class="text-xs font-mono px-2 text-seagull-400">-9.81</span>
         </div>
         <input type="range" id="gravitySlider" min="-20" max="20" step="0.1" value="-9.81"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- PIC/FLIP Ratio -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="picFlipSlider" class="text-xs font-medium text-gray-300">PIC/FLIP Ratio</label>
-          <span id="picFlipValue" class="text-xs font-mono bg-gray-900 px-2 rounded">0.95</span>
+          <label for="picFlipSlider" class="text-xs font-medium text-regent-gray-300">PIC/FLIP Ratio</label>
+          <span id="picFlipValue" class="text-xs font-mono px-2 text-seagull-400">0.95</span>
         </div>
         <input type="range" id="picFlipSlider" min="0" max="1" step="0.05" value="0.95"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- Target Density -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="targetDensitySlider" class="text-xs font-medium text-gray-300">Target Density</label>
-          <span id="targetDensityValue" class="text-xs font-mono bg-gray-900 px-2 rounded">5.0</span>
+          <label for="targetDensitySlider" class="text-xs font-medium text-regent-gray-300">Target Density</label>
+          <span id="targetDensityValue" class="text-xs font-mono px-2 text-seagull-400">5.0</span>
         </div>
         <input type="range" id="targetDensitySlider" min="0.1" max="50" step="0.1" value="5.0"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- Density Correction Strength -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="densityCorrectionStrengthSlider" class="text-xs font-medium text-gray-300">Density
+          <label for="densityCorrectionStrengthSlider" class="text-xs font-medium text-regent-gray-300">Density
             Correction</label>
-          <span id="densityCorrectionStrengthValue" class="text-xs font-mono bg-gray-900 px-2 rounded">1.0</span>
+          <span id="densityCorrectionStrengthValue" class="text-xs font-mono px-2 text-seagull-400">1.0</span>
         </div>
         <input type="range" id="densityCorrectionStrengthSlider" min="0.1" max="10" step="0.1" value="1.0"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- PCG Iterations -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="pcgIterationsSlider" class="text-xs font-medium text-gray-300">PCG Iterations</label>
-          <span id="pcgIterationsValue" class="text-xs font-mono bg-gray-900 px-2 rounded">50</span>
+          <label for="pcgIterationsSlider" class="text-xs font-medium text-regent-gray-300">PCG Iterations</label>
+          <span id="pcgIterationsValue" class="text-xs font-mono px-2 text-seagull-400">50</span>
         </div>
-        <input type="range" id="pcgIterationsSlider" min="10" max="250" step="5" value="50"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+        <input type="range" id="pcgIterationsSlider" min="10" max="500" step="5" value="50"
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- Normal Restitution -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="normalRestitutionSlider" class="text-xs font-medium text-gray-300">Normal Restitution</label>
-          <span id="normalRestitutionValue" class="text-xs font-mono bg-gray-900 px-2 rounded">0.1</span>
+          <label for="normalRestitutionSlider" class="text-xs font-medium text-regent-gray-300">Normal Restitution</label>
+          <span id="normalRestitutionValue" class="text-xs font-mono px-2 text-seagull-400">0.1</span>
         </div>
         <input type="range" id="normalRestitutionSlider" min="0" max="1" step="0.05" value="0.1"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- Tangent Restitution -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="tangentRestitutionSlider" class="text-xs font-medium text-gray-300">Tangent Restitution</label>
-          <span id="tangentRestitutionValue" class="text-xs font-mono bg-gray-900 px-2 rounded">0.8</span>
+          <label for="tangentRestitutionSlider" class="text-xs font-medium text-regent-gray-300">Tangent Restitution</label>
+          <span id="tangentRestitutionValue" class="text-xs font-mono px-2 text-seagull-400">0.8</span>
         </div>
         <input type="range" id="tangentRestitutionSlider" min="0" max="1" step="0.05" value="0.8"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
       <!-- Velocity Damping -->
-      <div class="control-group bg-slate-800 p-2 my-1 rounded-lg">
+      <div class="control-group p-2 my-1 border border-regent-gray-800">
         <div class="flex justify-between mb-1">
-          <label for="velocityDampingSlider" class="text-xs font-medium text-gray-300">Velocity Damping</label>
-          <span id="velocityDampingValue" class="text-xs font-mono bg-gray-900 px-2 rounded">0.95</span>
+          <label for="velocityDampingSlider" class="text-xs font-medium text-regent-gray-300">Velocity Damping</label>
+          <span id="velocityDampingValue" class="text-xs font-mono px-2 text-seagull-400">0.95</span>
         </div>
         <input type="range" id="velocityDampingSlider" min="0" max="1" step="0.001" value="0.95"
-          class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+          class="w-full h-2 bg-black-rock-900 rounded-none cursor-pointer">
       </div>
 
 
+      <div class="grid grid-cols-1">
+        <button id="saveStateButton" class="bg-regent-gray-600 text-black-rock-950 py-2 px-4 hover:bg-regent-gray-300 active:scale-105 transition-all duration-75 font-medium">
+          <i class="bi bi-download"></i> Save State
+        </button>
+      </div>
 
 
     </div>

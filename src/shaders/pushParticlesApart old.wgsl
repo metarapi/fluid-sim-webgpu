@@ -34,8 +34,6 @@ struct SimParams {
 @group(0) @binding(3) var<storage, read> cellParticleIds: array<u32>;
 @group(0) @binding(4) var<uniform> params: SimParams;
 @group(0) @binding(5) var terrainTexture: texture_2d<f32>;
-@group(0) @binding(6) var<storage, read> particleVelIn: array<vec2<f32>>;
-@group(0) @binding(7) var<storage, read_write> particleVelOut: array<vec2<f32>>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -50,9 +48,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   var accumulatedPushX = 0.0;
   var accumulatedPushY = 0.0;
   var pushCount = 0;
-
-  var accumulatedViscousDelta = vec2<f32>(0.0, 0.0);
-  var viscousCount = 0u;
 
   // // Scale push factor by number of substeps (linear)
   // let pushScale = 1.00 / f32(params.num_substeps);
@@ -110,14 +105,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         accumulatedPushY -= pushY;
 
         pushCount += 1;
-
-        // --- SPH-inspired viscosity ---
-        let v1 = particleVelIn[pid];
-        let v2 = particleVelIn[p2Id];
-        let dv = v2 - v1;
-        let viscosity_strength = 0.01; // Tune this value!
-        accumulatedViscousDelta += dv * viscosity_strength;
-        viscousCount += 1u;
       }
     }
   }
@@ -137,19 +124,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     newPos.x += accumulatedPushX;
     newPos.y += accumulatedPushY;
   }
-
-  if (viscousCount > 0u) {
-      particleVelOut[pid] = particleVelIn[pid] + accumulatedViscousDelta / f32(viscousCount);
-  } else {
-      particleVelOut[pid] = particleVelIn[pid];
-  }
   
   // Convert to normalized coordinate for texture access
   let u = clamp(newPos.x / params.length_x, 0.0, 0.99);
   // Convert to integer pixel coordinate for textureLoad
   let pixel_x = u32(u * f32(params.upscaled_terrain_count - 1u));
   // Get terrain height and normal from texture
-  let terrainData = textureLoad(terrainTexture, vec2<u32>(pixel_x, 0u), 0); 
+  let terrainData = textureLoad(terrainTexture, vec2<u32>(pixel_x, 0u), 0);
   let terrainHeight = terrainData.r;
 
   // Check if particle is below terrain

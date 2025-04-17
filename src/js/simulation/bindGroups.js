@@ -47,14 +47,34 @@ export async function initBindGroups(state) {
     //     { binding: 3, resource: { buffer: buffers.terrainParams } }
     //   ]
     // });
-  
+
+    // // Create mark solid bind group for marking solid cells
+    // const markSolid = device.createBindGroup({
+    //   layout: pipelines.markSolid.layout,
+    //   entries: [
+    //     { binding: 0, resource: { buffer: buffers.cellType } },
+    //     { binding: 1, resource: buffers.terrainTexture.createView() },
+    //     { binding: 2, resource: { buffer: buffers.simParams } },
+    //     { binding: 3, resource: { buffer: buffers.volumeFractions } },
+    //   ]
+    // });
+
+    const markFluidFractions = device.createBindGroup({
+      layout: pipelines.markFluidFractions.layout,
+      entries: [
+        { binding: 0, resource: buffers.terrainTexture.createView() },
+        { binding: 1, resource: { buffer: buffers.simParams } },
+        { binding: 2, resource: { buffer: buffers.volumeFractions } }
+      ]
+    });
+
     // Create mark solid bind group for marking solid cells
     const markSolid = device.createBindGroup({
       layout: pipelines.markSolid.layout,
       entries: [
         { binding: 0, resource: { buffer: buffers.cellType } },
-        { binding: 1, resource: buffers.terrainTexture.createView() },
-        { binding: 2, resource: { buffer: buffers.simParams } },
+        { binding: 1, resource: { buffer: buffers.simParams } },
+        { binding: 2, resource: { buffer: buffers.volumeFractions } },
       ]
     });
   
@@ -70,6 +90,7 @@ export async function initBindGroups(state) {
   
     return {
       // bresenham,
+      markFluidFractions,
       markSolid,
       markLiquid
     };
@@ -114,7 +135,9 @@ export async function initBindGroups(state) {
         { binding: 3, resource: { buffer: buffers.cellParticleIds } },
         { binding: 4, resource: { buffer: buffers.simParams } },
         // { binding: 5, resource: { buffer: buffers.currentIteration } },
-        { binding: 5, resource: buffers.terrainTexture.createView() }
+        { binding: 5, resource: buffers.terrainTexture.createView() },
+        { binding: 6, resource: { buffer: buffers.particles.particleVelocity } },
+        { binding: 7, resource: { buffer: buffers.particles.particleVelocityPong } },
       ]
     });
     
@@ -128,7 +151,9 @@ export async function initBindGroups(state) {
         { binding: 3, resource: { buffer: buffers.cellParticleIds } },
         { binding: 4, resource: { buffer: buffers.simParams } },
         // { binding: 5, resource: { buffer: buffers.currentIteration } },
-        { binding: 5, resource: buffers.terrainTexture.createView() }
+        { binding: 5, resource: buffers.terrainTexture.createView() },
+        { binding: 6, resource: { buffer: buffers.particles.particleVelocityPong } },
+        { binding: 7, resource: { buffer: buffers.particles.particleVelocity } },
       ]
     });
     
@@ -305,6 +330,19 @@ export async function initBindGroups(state) {
         { binding: 2, resource: { buffer: buffers.simParams } }
       ]
     });
+
+    // Create apply viscosity bind group
+    const applyViscosity = device.createBindGroup({
+      layout: pipelines.applyViscosity.layout,
+      entries: [
+        { binding: 0, resource: { buffer: buffers.uGrid } },
+        { binding: 1, resource: { buffer: buffers.vGrid } },
+        { binding: 2, resource: { buffer: buffers.simParams } },
+        { binding: 3, resource: { buffer: buffers.physParams } },
+        { binding: 4, resource: { buffer: buffers.volumeFractions } },
+        { binding: 5, resource: { buffer: buffers.cellType } }
+      ]
+    });    
     
     return {
       particleToGridU,
@@ -313,7 +351,8 @@ export async function initBindGroups(state) {
       addAccelerationAndDirichletU,
       addAccelerationAndDirichletV,
       extendVelocityU,
-      extendVelocityV
+      extendVelocityV,
+      applyViscosity
     };
   }
 
@@ -335,7 +374,8 @@ function createPCGBindGroups(device, buffers, pipelines) {
       { binding: 3, resource: { buffer: buffers.divergence } },
       { binding: 4, resource: { buffer: buffers.densityGrid } },
       { binding: 5, resource: { buffer: buffers.simParams } },
-      { binding: 6, resource: { buffer: buffers.physParams } }
+      { binding: 6, resource: { buffer: buffers.physParams } },
+      { binding: 7, resource: { buffer: buffers.volumeFractions } }
     ]
   });
 
@@ -346,7 +386,8 @@ function createPCGBindGroups(device, buffers, pipelines) {
       { binding: 0, resource: { buffer: buffers.residual } },
       { binding: 1, resource: { buffer: buffers.cellType } },
       { binding: 2, resource: { buffer: buffers.aux } },
-      { binding: 3, resource: { buffer: buffers.simParams } }
+      { binding: 3, resource: { buffer: buffers.simParams } },
+      { binding: 4, resource: { buffer: buffers.volumeFractions } },
     ]
   });
 
@@ -357,7 +398,8 @@ function createPCGBindGroups(device, buffers, pipelines) {
       { binding: 0, resource: { buffer: buffers.searchDirection } },
       { binding: 1, resource: { buffer: buffers.cellType } },
       { binding: 2, resource: { buffer: buffers.temp } },
-      { binding: 3, resource: { buffer: buffers.simParams } }
+      { binding: 3, resource: { buffer: buffers.simParams } },
+      { binding: 4, resource: { buffer: buffers.volumeFractions } }
     ]
   });
 
@@ -469,6 +511,7 @@ function createPCGBindGroups(device, buffers, pipelines) {
       { binding: 4, resource: { buffer: buffers.simParams } },
       { binding: 5, resource: { buffer: buffers.physParams } },
       { binding: 6, resource: { buffer: buffers.densityGrid } },
+      { binding: 7, resource: { buffer: buffers.volumeFractions } }
     ]
   });
 
@@ -509,6 +552,7 @@ function createTransferAndAdvectionBindGroups(device, buffers, pipelines) {
       { binding: 5, resource: { buffer: buffers.vGridPrev } },
       { binding: 6, resource: { buffer: buffers.simParams } },
       { binding: 7, resource: { buffer: buffers.physParams } },
+      { binding: 8, resource: { buffer: buffers.densityGrid } }, // For viscosity
     ]
   });
 

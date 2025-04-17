@@ -31,77 +31,75 @@ struct SimParams {
 @group(0) @binding(1) var<storage, read> cellType: array<u32>;  // SOLID=0, AIR=1, LIQUID=2
 @group(0) @binding(2) var<storage, read_write> temp: array<f32>; // Ap result
 @group(0) @binding(3) var<uniform> params: SimParams;
+@group(0) @binding(4) var<storage, read> volumeFractions: array<f32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  let idx = id.x;
-  if (idx >= params.size_x * params.size_y) { return; }
-  
-  // Skip non-fluid cells
-  if (cellType[idx] != LIQUID) { // 0 = LIQUID
-    temp[idx] = 0.0;
-    return;
-  }
-  
-  let i = idx % params.size_x;
-  let j = idx / params.size_x;
-  let dx2 = params.grid_to_world_y * params.grid_to_world_y; // Cell size squared
-  
-  // Calculate Laplacian on-the-fly (stencil)
-  var sum_neighbors = 0.0;
-  var n_non_solid = 0u;
-  
-  // Left neighbor
-  if (i > 0u) {
-    let nidx = idx - 1u;
-    if (cellType[nidx] != SOLID) { // Not SOLID
-      n_non_solid++;
-      if (cellType[nidx] == LIQUID) { // LIQUID
-        sum_neighbors += searchDirection[nidx];
+    let idx = id.x;
+    if (idx >= params.size_x * params.size_y) { return; }
+
+    if (cellType[idx] != LIQUID) {
+        temp[idx] = 0.0;
+        return;
+    }
+
+    let i = idx % params.size_x;
+    let j = idx / params.size_x;
+    let dx2 = params.grid_to_world_y * params.grid_to_world_y;
+
+    let center = searchDirection[idx];
+    let fracC = volumeFractions[idx];
+
+    var sum = 0.0;
+    var diag = 0.0;
+
+    // Right neighbor
+    if (i < params.size_x - 1u) {
+      let nidx = idx + 1u;
+      let fracN = volumeFractions[nidx];
+      let faceFrac = min(fracC, fracN);
+      if (cellType[nidx] != SOLID && faceFrac > 0.0) {
+          diag += faceFrac;
+          sum += faceFrac * (searchDirection[nidx] - center);
       }
     }
-  }
-  
-  // Right neighbor
-  if (i < params.size_x - 1u) {
-    let nidx = idx + 1u;
-    if (cellType[nidx] != SOLID) {
-      n_non_solid++;
-      if (cellType[nidx] == LIQUID) {
-        sum_neighbors += searchDirection[nidx];
+    // Left neighbor
+    if (i > 0u) {
+      let nidx = idx - 1u;
+      let fracN = volumeFractions[nidx];
+      let faceFrac = min(fracC, fracN);
+      if (cellType[nidx] != SOLID && faceFrac > 0.0) {
+          diag += faceFrac;
+          sum += faceFrac * (searchDirection[nidx] - center);
       }
     }
-  }
-  
-  // Bottom neighbor
-  if (j > 0u) {
-    let nidx = idx - params.size_x;
-    if (cellType[nidx] != SOLID) {
-      n_non_solid++;
-      if (cellType[nidx] == LIQUID) {
-        sum_neighbors += searchDirection[nidx];
+    // Top neighbor
+    if (j < params.size_y - 1u) {
+      let nidx = idx + params.size_x;
+      let fracN = volumeFractions[nidx];
+      let faceFrac = min(fracC, fracN);
+      if (cellType[nidx] != SOLID && faceFrac > 0.0) {
+          diag += faceFrac;
+          sum += faceFrac * (searchDirection[nidx] - center);
       }
     }
-  }
-  
-  // Top neighbor
-  if (j < params.size_y - 1u) {
-    let nidx = idx + params.size_x;
-    if (cellType[nidx] != SOLID) {
-      n_non_solid++;
-      if (cellType[nidx] == LIQUID) {
-        sum_neighbors += searchDirection[nidx];
+    // Bottom neighbor
+    if (j > 0u) {
+      let nidx = idx - params.size_x;
+      let fracN = volumeFractions[nidx];
+      let faceFrac = min(fracC, fracN);
+      if (cellType[nidx] != SOLID && faceFrac > 0.0) {
+          diag += faceFrac;
+          sum += faceFrac * (searchDirection[nidx] - center);
       }
     }
-  }
-  
-  // Handle case with no valid neighbors
-  if (n_non_solid == 0u) {
-    temp[idx] = 0.0;
-    return;
-  }
-  
-  // Compute A·p for this cell using the central difference Laplacian
-  // The formula is (sum_neighbors - n_non_solid * center) / dx²
-  temp[idx] = (sum_neighbors - f32(n_non_solid) * searchDirection[idx]) / dx2;
+
+    // If all face fractions are zero, this cell is isolated
+    if (diag == 0.0) {
+        temp[idx] = 0.0;
+        return;
+    }
+
+    // Central difference Laplacian with cut-cell fractions
+    temp[idx] = sum / dx2;
 }

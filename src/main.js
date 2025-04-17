@@ -1,7 +1,7 @@
 import './style.css'
 import { initializeSimulation, recreateSimulation } from './js/utils/setup.js';
 import { setupGridDropdown, setupParticleDropdown } from './js/utils/dropdownControls.js';
-
+import { saveState } from './js/utils/io.js';
 
 // Main state object
 const simState = {
@@ -40,7 +40,12 @@ async function init() {
     );
 
     // Make simState globally accessible for debugging
-    window.simState = simState;    
+    window.simState = simState;  
+    
+    document.getElementById('saveStateButton').addEventListener('click', async () => { 
+      await saveState(simState);
+    });
+    
   } catch (err) {
     console.error("Initialization failed:", err);
     document.body.innerHTML = `<div class="error">Error: ${err.message}</div>`;

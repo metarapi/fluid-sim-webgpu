@@ -119,7 +119,7 @@ async function initPhysicsParams(device, config) {
   dataView.setFloat32(offset, 1/60, true); offset += 4;          // dt  #8
 
   // Pressure solver parameters
-  dataView.setFloat32(offset, 0.05, true); offset += 4;          // pressure_stiffness (underrelaxation) #12 UNUSED
+  dataView.setFloat32(offset, 0.001, true); offset += 4;          // dynamic(?) viscosity coefficient #12
 
   // Fluid density parameters
   dataView.setFloat32(offset, 1.0, true); offset += 4;           // fluid_density (not in kg/m³)  #16
@@ -251,6 +251,7 @@ async function initGrids(device, config) {
     const uMask = new Uint32Array((gridSizeX + 1) * gridSizeY).fill(0); // 0 for empty cells
     const vMask = new Uint32Array(gridSizeX * (gridSizeY + 1)).fill(0); // 0 for empty cells
     const cellTypeArray = new Uint32Array(config.numberOfCells).fill(1); // AIR by default
+    const volumeFractionsArray = new Float32Array(numberOfCells).fill(0.0); // 0.0 for solid cells
     
     // Create buffers for the grids
     const pressureGrid = device.createBuffer({
@@ -300,6 +301,12 @@ async function initGrids(device, config) {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
     
+    // Initialize volume fractions (if needed)
+    const volumeFractions = device.createBuffer({
+        size: volumeFractionsArray.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+    });
+
     // Write the data to the buffers
     device.queue.writeBuffer(pressureGrid, 0, pressureData);
     device.queue.writeBuffer(densityGrid, 0, densityData);
@@ -310,7 +317,8 @@ async function initGrids(device, config) {
     device.queue.writeBuffer(uGridPrev, 0, uData);
     device.queue.writeBuffer(vGridPrev, 0, vData);
     device.queue.writeBuffer(cellType, 0, cellTypeArray);
-    
+    device.queue.writeBuffer(volumeFractions, 0, volumeFractionsArray);
+
     return {
       pressureGrid,
       densityGrid,
@@ -321,6 +329,7 @@ async function initGrids(device, config) {
       uGridPrev,
       vGridPrev,
       cellType,
+      volumeFractions,
     };
   }
 

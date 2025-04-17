@@ -25,6 +25,8 @@ struct SimParams {
     num_substeps: u32,
     current_substep: u32,
     workgroup_count: u32,
+    // Terrain properties
+    upscaled_terrain_count: u32,
 };
 
 @group(0) @binding(0) var<storage, read> cellType: array<u32>;
@@ -33,6 +35,7 @@ struct SimParams {
 @group(0) @binding(3) var<storage, read> cellParticleIds: array<u32>;
 @group(0) @binding(4) var<storage, read> particlePos: array<vec2<f32>>;
 @group(0) @binding(5) var<uniform> params: SimParams;
+
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {

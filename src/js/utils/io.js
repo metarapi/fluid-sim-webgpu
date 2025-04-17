@@ -29,32 +29,34 @@ export async function readBufferData(buffer, type = "uint", device) {
     const { device, config, buffers } = state;
     
     try {
-      // Save the 2 arrays for neighborhood lookup (firstCellParticle and cellParticleIds)
-      const firstCellParticle = await readBufferData(
-        buffers.firstCellParticle, 
-        "uint", 
-        device
-      );
+      console.log("Attempting to save state...");
 
-      const cellParticleIds = await readBufferData(
-        buffers.cellParticleIds, 
-        "uint", 
-        device
-      );
+      // // Save the 2 arrays for neighborhood lookup (firstCellParticle and cellParticleIds)
+      // const firstCellParticle = await readBufferData(
+      //   buffers.firstCellParticle, 
+      //   "uint", 
+      //   device
+      // );
 
-      const numCellParticles = await readBufferData(
-        buffers.numCellParticles, 
-        "uint", 
-        device
-      );
+      // const cellParticleIds = await readBufferData(
+      //   buffers.cellParticleIds, 
+      //   "uint", 
+      //   device
+      // );
 
-      const firstCellParticleCSV = firstCellParticle.join(',');
-      const cellParticleIdsCSV = cellParticleIds.join(',');
-      const numCellParticlesCSV = numCellParticles.join(',');
+      // const numCellParticles = await readBufferData(
+      //   buffers.numCellParticles, 
+      //   "uint", 
+      //   device
+      // );
 
-      downloadCSV(firstCellParticleCSV, 'firstCellParticle.csv');
-      downloadCSV(cellParticleIdsCSV, 'cellParticleIds.csv');
-      downloadCSV(numCellParticlesCSV, 'numCellParticles.csv');
+      // const firstCellParticleCSV = firstCellParticle.join(',');
+      // const cellParticleIdsCSV = cellParticleIds.join(',');
+      // const numCellParticlesCSV = numCellParticles.join(',');
+
+      // downloadCSV(firstCellParticleCSV, 'firstCellParticle.csv');
+      // downloadCSV(cellParticleIdsCSV, 'cellParticleIds.csv');
+      // downloadCSV(numCellParticlesCSV, 'numCellParticles.csv');
 
       // // Save particle positions
       // const positions = await readBufferData(
@@ -72,28 +74,45 @@ export async function readBufferData(buffer, type = "uint", device) {
       // // Download the file
       // downloadCSV(particleCSV, 'particles.csv');
       
-      // // Save grid cells
-      // const gridData = await readBufferData(
-      //   buffers.cellType, 
-      //   "uint", 
-      //   device
-      // );
-      
-      // // Format as 2D grid
-      // const gridCSV = [];
-      // for(let y = 0; y < config.gridSizeY; y++) {
-      //   const row = [];
-      //   for(let x = 0; x < config.gridSizeX; x++) {
-      //     row.push(gridData[x + y * config.gridSizeX]);
-      //   }
-      //   gridCSV.push(row.join(','));
-      // }
-      
-      // // Download the file
-      // downloadCSV(gridCSV.join('\n'), 'grid.csv');
+      // Save grid cells
+      const gridData = await readBufferData(
+        buffers.cellType, 
+        "uint", 
+        device
+      );
 
-      console.log("Saving terrain texture data...");
-      await saveTextureAsCSV(buffers.terrainTexture, device, 'terrain_texture.csv');
+      const volumeFractionsData = await readBufferData(
+        buffers.volumeFractions, 
+        "float", 
+        device
+      );
+      
+      // Format as 2D grid
+      const gridCSV = [];
+      for(let y = 0; y < config.gridSizeY; y++) {
+        const row = [];
+        for(let x = 0; x < config.gridSizeX; x++) {
+          row.push(gridData[x + y * config.gridSizeX]);
+        }
+        gridCSV.push(row.join(','));
+      }
+
+      const volumeFractionsCSV = [];
+      for(let y = 0; y < config.gridSizeY; y++) {
+        const row = [];
+        for(let x = 0; x < config.gridSizeX; x++) {
+          row.push(volumeFractionsData[x + y * config.gridSizeX]);
+        }
+        volumeFractionsCSV.push(row.join(','));
+      }
+      
+      // Download the file
+      downloadCSV(gridCSV.join('\n'), 'cellType.csv');
+      downloadCSV(volumeFractionsCSV.join('\n'), 'volumeFractions.csv');
+
+
+      // console.log("Saving terrain texture data...");
+      // await saveTextureAsCSV(buffers.terrainTexture, device, 'terrain_texture.csv');
 
     } catch (err) {
       console.error("Error saving state:", err);

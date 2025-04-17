@@ -31,39 +31,42 @@ struct SimParams {
 @group(0) @binding(1) var<storage, read> cellType: array<u32>;  
 @group(0) @binding(2) var<storage, read_write> aux: array<f32>; // z = M⁻¹r
 @group(0) @binding(3) var<uniform> params: SimParams;
+@group(0) @binding(4) var<storage, read> volumeFractions: array<f32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  let idx = id.x;
-  if (idx >= params.size_x * params.size_y) { return; }
-  
-  // Skip non-fluid cells
-  if (cellType[idx] != LIQUID) {
-    aux[idx] = 0.0;
-    return;
-  }
-  
-  let i = idx % params.size_x;
-  let j = idx / params.size_x;
-  let dx2 = params.grid_to_world_x * params.grid_to_world_x; // Assumes dx = dy; square cell size
-  
-  // Count non-solid neighbors to calculate preconditioner
-  var n_non_solid = 0u;
-  
-  // Check all 4 neighbors
-  if (i > 0u && cellType[idx - 1u] != SOLID) { n_non_solid++; }
-  if (i < params.size_x - 1u && cellType[idx + 1u] != SOLID) { n_non_solid++; }
-  if (j > 0u && cellType[idx - params.size_x] != SOLID) { n_non_solid++; }
-  if (j < params.size_y - 1u && cellType[idx + params.size_x] != SOLID) { n_non_solid++; }
-  
-  // Calculate preconditioner value (Jacobi)
-  var precond_value: f32;
-  if (n_non_solid == 0u) {
-    precond_value = 1.0;  // Avoid division by zero
-  } else {
-    precond_value = -dx2 / f32(n_non_solid);  // Jacobi preconditioner
-  }
-  
-  // Apply preconditioner: z = M⁻¹r
-  aux[idx] = precond_value * residual[idx];
+    let idx = id.x;
+    if (idx >= params.size_x * params.size_y) { return; }
+    
+    if (cellType[idx] != LIQUID) {
+        aux[idx] = 0.0;
+        return;
+    }
+    
+    let i = idx % params.size_x;
+    let j = idx / params.size_x;
+    let dx2 = params.grid_to_world_x * params.grid_to_world_x;
+    
+    // Calculate actual diagonal using face fractions
+    var diag = 0.0;
+    
+    // Right
+    if (i < params.size_x - 1u && cellType[idx + 1u] != SOLID) {
+        diag += min(volumeFractions[idx], volumeFractions[idx + 1u]);
+    }
+    // Left
+    if (i > 0u && cellType[idx - 1u] != SOLID) {
+        diag += min(volumeFractions[idx], volumeFractions[idx - 1u]);
+    }
+    // Top
+    if (j < params.size_y - 1u && cellType[idx + params.size_x] != SOLID) {
+        diag += min(volumeFractions[idx], volumeFractions[idx + params.size_x]);
+    }
+    // Bottom
+    if (j > 0u && cellType[idx - params.size_x] != SOLID) {
+        diag += min(volumeFractions[idx], volumeFractions[idx - params.size_x]);
+    }
+    
+    // Preconditioner: M⁻¹ ≈ (Δx²/diag)
+    aux[idx] = (dx2 / (diag + 1e-7)) * residual[idx];
 }

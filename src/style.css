@@ -1,3 +1,66 @@
 @import "tailwindcss";
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 @plugin "flyonui";
+
+@theme {
+    --color-science-blue-50: #eff8ff;
+    --color-science-blue-100: #dceffd;
+    --color-science-blue-200: #c1e4fc;
+    --color-science-blue-300: #96d4fa;
+    --color-science-blue-400: #65baf5;
+    --color-science-blue-500: #419cf0;
+    --color-science-blue-600: #2b80e5;
+    --color-science-blue-700: #2165c8;
+    --color-science-blue-800: #2256ab;
+    --color-science-blue-900: #214b87;
+    --color-science-blue-950: #192e52;
+
+    --color-seagull-50: #f0faff;
+    --color-seagull-100: #e1f4fd;
+    --color-seagull-200: #bceafb;
+    --color-seagull-300: #81dbf8;
+    --color-seagull-400: #2bc3f1;
+    --color-seagull-500: #15b2e2;
+    --color-seagull-600: #0890c1;
+    --color-seagull-700: #08739c;
+    --color-seagull-800: #0b6181;
+    --color-seagull-900: #0f506b;
+    --color-seagull-950: #0a3447;
+
+    --color-regent-gray-50: #f5f7f8;
+    --color-regent-gray-100: #ecf1f3;
+    --color-regent-gray-200: #dde4e8;
+    --color-regent-gray-300: #c8d3d9;
+    --color-regent-gray-400: #b1bec8;
+    --color-regent-gray-500: #9caab8;
+    --color-regent-gray-600: #8e9aab;
+    --color-regent-gray-700: #737e8f;
+    --color-regent-gray-800: #5e6775;
+    --color-regent-gray-900: #4f5660;
+    --color-regent-gray-950: #2e3238;
+
+    --color-black-rock-50: #e6f0ff;
+    --color-black-rock-100: #d1e2ff;
+    --color-black-rock-200: #adc8ff;
+    --color-black-rock-300: #7ca1ff;
+    --color-black-rock-400: #496aff;
+    --color-black-rock-500: #2134ff;
+    --color-black-rock-600: #0003ff;
+    --color-black-rock-700: #0007ff;
+    --color-black-rock-800: #0006d9;
+    --color-black-rock-900: #070ba8;
+    --color-black-rock-950: #02022b;
+
+    --color-brick-red-50: #fcf5f4;
+    --color-brick-red-100: #fae9e9;
+    --color-brick-red-200: #f5d6d7;
+    --color-brick-red-300: #ecb5b6;
+    --color-brick-red-400: #e18b90;
+    --color-brick-red-500: #d2616a;
+    --color-brick-red-600: #bf4757;
+    --color-brick-red-700: #9e3243;
+    --color-brick-red-800: #852c3d;
+    --color-brick-red-900: #722939;
+    --color-brick-red-950: #3f121b;
+}
+

@@ -47,11 +47,12 @@ struct PhysicsParams {
 @group(0) @binding(4) var<uniform> params: SimParams;
 @group(0) @binding(5) var<uniform> physicsParams: PhysicsParams;
 @group(0) @binding(6) var<storage, read> densityGrid: array<f32>;
+@group(0) @binding(7) var<storage, read> volumeFractions: array<f32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let idx = id.x;
-  if (idx >= params.size_x * params.size_y) { return; } // Fixed params.gridSizeX/Y to params.size_x/y
+  if (idx >= params.size_x * params.size_y) { return; }
   
   let i = idx % params.size_x;
   let j = idx / params.size_x;
@@ -71,19 +72,24 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let v_idx_top = (j + 1) * params.size_x + i;
   let v_idx_bottom = j * params.size_x + i;
   
-  // const STIFFNESS: f32 = 0.5; // Under-relaxation factor (0.6 is the limit at dt = 1/60)
-  // let STIFFNESS = physicsParams.pressure_stiffness;
-
   let localDensity = densityGrid[idx];
-  // let localDensity = max(0.0, (physicsParams.target_density - densityGrid[idx])/physicsParams.target_density);
-  // var scale = STIFFNESS * physicsParams.dt / (physicsParams.fluid_density * params.grid_to_world_x);
+
   var scale = localDensity * physicsParams.dt / (physicsParams.fluid_density * params.grid_to_world_x);
+
+  // let faceFrac = 1.0; // for testing
 
   // Right face
   if (i < params.size_x - 1u && (cellType[idx] == LIQUID || cellType[idx + 1u] == LIQUID)) {
     let pressure_right = select(0.0, pressure[idx + 1u], cellType[idx + 1u] == LIQUID);
     let pressure_center = select(0.0, pressure[idx], cellType[idx] == LIQUID);
-    let grad_pressure = (pressure_right - pressure_center) * scale;
+
+    // --- Volume fraction scaling ---
+    let fracL = volumeFractions[idx];
+    let fracR = volumeFractions[idx + 1u];
+    let faceFrac = min(fracL, fracR);
+    // -----------------------------
+
+    let grad_pressure = (pressure_right - pressure_center) * scale * faceFrac;
     uGrid[u_idx_right] -= grad_pressure;
 
     // Quasi-Dirichlet boundary condition (no flow into solid cells)
@@ -98,7 +104,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   if (i > 0u && (cellType[idx] == LIQUID || cellType[idx - 1u] == LIQUID)) {
     let pressure_left = select(0.0, pressure[idx - 1u], cellType[idx - 1u] == LIQUID);
     let pressure_center = select(0.0, pressure[idx], cellType[idx] == LIQUID);
-    let grad_pressure = (pressure_center - pressure_left) * scale;
+
+    // --- Volume fraction scaling ---
+    let fracL = volumeFractions[idx];
+    let fracR = volumeFractions[idx - 1u];
+    let faceFrac = min(fracL, fracR);
+    // -----------------------------
+
+    let grad_pressure = (pressure_center - pressure_left) * scale * faceFrac;
     uGrid[u_idx_left] -= grad_pressure;
 
     if (cellType[idx - 1u] == SOLID && uGrid[u_idx_left] < 0.0) {
@@ -112,7 +125,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   if (j < params.size_y - 1u && (cellType[idx] == LIQUID || cellType[idx + params.size_x] == LIQUID)) {
     let pressure_top = select(0.0, pressure[idx + params.size_x], cellType[idx + params.size_x] == LIQUID);
     let pressure_center = select(0.0, pressure[idx], cellType[idx] == LIQUID);
-    let grad_pressure = (pressure_top - pressure_center) * scale;
+
+    // --- Volume fraction scaling ---
+    let fracL = volumeFractions[idx];
+    let fracR = volumeFractions[idx + params.size_x];
+    let faceFrac = min(fracL, fracR);
+    // -----------------------------
+
+    let grad_pressure = (pressure_top - pressure_center) * scale * faceFrac;
     vGrid[v_idx_top] -= grad_pressure;
 
     if (cellType[idx + params.size_x] == SOLID && vGrid[v_idx_top] < 0.0) {
@@ -126,7 +146,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   if (j > 0u && (cellType[idx] == LIQUID || cellType[idx - params.size_x] == LIQUID)) {
     let pressure_bottom = select(0.0, pressure[idx - params.size_x], cellType[idx - params.size_x] == LIQUID);
     let pressure_center = select(0.0, pressure[idx], cellType[idx] == LIQUID);
-    let grad_pressure = (pressure_center - pressure_bottom) * scale;
+
+    // --- Volume fraction scaling ---
+    let fracL = volumeFractions[idx];
+    let fracR = volumeFractions[idx - params.size_x];
+    let faceFrac = min(fracL, fracR);
+    // -----------------------------
+
+    let grad_pressure = (pressure_center - pressure_bottom) * scale * faceFrac;
     vGrid[v_idx_bottom] -= grad_pressure;
 
     if (cellType[idx - params.size_x] == SOLID && vGrid[v_idx_bottom] < 0.0) {
@@ -135,4 +162,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
       vGrid[v_idx_bottom] = 0.0;
     }
   }
+
+  // Dummy reads to prevent unused variable warnings
+  // let dummyPressure = volumeFractions[0u];
+  // let dummyDensity = densityGrid[0u];
 }

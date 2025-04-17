@@ -47,6 +47,7 @@ struct PhysicsParams {
 @group(0) @binding(4) var<storage, read> densityGrid: array<f32>;
 @group(0) @binding(5) var<uniform> params: SimParams;
 @group(0) @binding(6) var<uniform> physicsParams: PhysicsParams;
+@group(0) @binding(7) var<storage, read> volumeFractions: array<f32>;
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -72,29 +73,35 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   // V grid is size_x × (size_y+1) where V[i,j] is at bottom of cell
   let v_idx_top = (j + 1) * params.size_x + i;
   let v_idx_bottom = j * params.size_x + i;
-  
-  // Calculate divergence directly from MAC grid
-  let div_x = uGrid[u_idx_right] - uGrid[u_idx_left];
-  let div_y = vGrid[v_idx_top] - vGrid[v_idx_bottom];
+
+  // // Calculate divergence directly from MAC grid
+  // let div_x = uGrid[u_idx_right] - uGrid[u_idx_left];
+  // let div_y = vGrid[v_idx_top] - vGrid[v_idx_bottom];
+
+  // Calculate face fractions
+  let frac_right  = min(volumeFractions[idx], volumeFractions[idx + 1u]);
+  let frac_left   = min(volumeFractions[idx], volumeFractions[idx - 1u]);
+  let frac_top    = min(volumeFractions[idx], volumeFractions[idx + params.size_x]);
+  let frac_bottom = min(volumeFractions[idx], volumeFractions[idx - params.size_x]);
+
+  // Calculate divergence using face fractions
+  let div_x = frac_right * uGrid[u_idx_right] - frac_left * uGrid[u_idx_left];
+  let div_y = frac_top * vGrid[v_idx_top] - frac_bottom * vGrid[v_idx_bottom];
 
   // Scale by grid spacing
   let scaled_div = (div_x / params.grid_to_world_x + div_y / params.grid_to_world_y);
   
   // Add density correction
-  // let targetDensity = 3.2; // Tuned to desired particle density per cell
   let currentDensity = densityGrid[idx];
 
   // Only correct over-density (compressed regions)
   let compression = max(0.0, currentDensity - targetDensity);
 
-  // Correct both under-density and over-density
-  // let compression = abs(currentDensity - targetDensity);
-
   // Scale factor controls strength of correction
-  // let correctionStrength = 0.5;
   let densityCorrection = (correctionStrength) * compression;
-
 
   // Apply density correction
   divergence[idx] = scaled_div - densityCorrection;
+
+  let dummyFraction = volumeFractions[0u];
 }

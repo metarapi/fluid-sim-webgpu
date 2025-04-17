@@ -15,6 +15,14 @@ export async function runMonolithicSimulationStep(state) {
     encoder.clearBuffer(buffers.cellType);
  
     {
+      const markFluidFractionsPass = encoder.beginComputePass();
+      markFluidFractionsPass.setPipeline(pipelines.markFluidFractions.pipeline);
+      markFluidFractionsPass.setBindGroup(0, bindGroups.markFluidFractions);
+      markFluidFractionsPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      markFluidFractionsPass.end();
+    }
+
+    {
       const markSolidPass = encoder.beginComputePass();
       markSolidPass.setPipeline(pipelines.markSolid.pipeline);
       markSolidPass.setBindGroup(0, bindGroups.markSolid);
@@ -186,22 +194,31 @@ export async function runMonolithicSimulationStep(state) {
       buffers.vGrid.size
     );
 
-    // Extension passes - each extends one cell further
-    const numExtensionPasses = 3; // Extend velocity field by 3 cells
-    for (let pass = 0; pass < numExtensionPasses; pass++) {
-      // Each pass must be a separate compute dispatch
-      const extendUPass = encoder.beginComputePass();
-      extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
-      extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
-      extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
-      extendUPass.end();
+    // // Extension passes - each extends one cell further
+    // const numExtensionPasses = 3; // Extend velocity field by 3 cells
+    // for (let pass = 0; pass < numExtensionPasses; pass++) {
+    //   // Each pass must be a separate compute dispatch
+    //   const extendUPass = encoder.beginComputePass();
+    //   extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
+    //   extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
+    //   extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
+    //   extendUPass.end();
       
-      const extendVPass = encoder.beginComputePass();
-      extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
-      extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
-      extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
-      extendVPass.end();
-    }
+    //   const extendVPass = encoder.beginComputePass();
+    //   extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
+    //   extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
+    //   extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
+    //   extendVPass.end();
+    // }
+
+    // // Apply viscosity pass (diffuse grid velocities - Laplacian)
+    // {
+    //   const viscosityPass = encoder.beginComputePass();
+    //   viscosityPass.setPipeline(pipelines.applyViscosity.pipeline);
+    //   viscosityPass.setBindGroup(0, bindGroups.applyViscosity);
+    //   viscosityPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+    //   viscosityPass.end();
+    // }
 
     // Apply external forces
     {
@@ -293,7 +310,7 @@ export async function runMonolithicSimulationStep(state) {
   
     // PCG iteration loop - this is the key optimization
     // We do fixed number of iterations instead of checking convergence
-    const pcgIterations = Math.min(pcg.maxIterations, 250); // Use up to X iterations
+    const pcgIterations = Math.min(pcg.maxIterations, 500); // Use up to X iterations
 
     // Create a staging buffer for temporary dot product value
     const tempDotBuffer = device.createBuffer({

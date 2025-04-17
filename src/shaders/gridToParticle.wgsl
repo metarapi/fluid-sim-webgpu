@@ -33,7 +33,7 @@ struct SimParams {
 struct PhysicsParams {
     gravity: vec2<f32>,
     dt: f32,
-    pressure_stiffness: f32,
+    viscosity: f32,
     fluid_density: f32,
     target_density: f32,
     density_correction_strength: f32,
@@ -51,8 +51,90 @@ struct PhysicsParams {
 @group(0) @binding(5) var<storage, read> vGridPrev: array<f32>;
 @group(0) @binding(6) var<uniform> params: SimParams;
 @group(0) @binding(7) var<uniform> physicsParams: PhysicsParams;
+@group(0) @binding(8) var<storage, read> densityGrid: array<f32>;
 
 // const FLIP_RATIO: f32 = 0.85; // 85% FLIP, 15% PIC blend (remember, more PIC = more viscosity [Bridson, 2016. p. 118])
+
+// @compute @workgroup_size(256)
+// fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+//     let pid = id.x;
+//     if (pid >= params.particle_count) { return; }
+    
+//     let pic_flip_ratio = physicsParams.pic_flip_ratio;
+//     let velocity_damping = physicsParams.velocity_damping;
+
+//     // Get particle position
+//     let pos = particlePos[pid];
+
+//     // Get particle position in grid coordinates
+//     let i = pos.pos.x * params.world_to_grid_x;
+//     let j = pos.pos.y * params.world_to_grid_y;
+    
+//     // For U-velocity: shift horizontally by +0.5 to align with u-velocity points
+//     let ui = i + 0.5;
+//     let uj = j;
+//     let ui0 = u32(floor(ui));
+//     let uj0 = u32(floor(uj));
+//     let su = ui - f32(ui0); // U-interpolation fraction
+//     let sv = uj - f32(uj0); // V-interpolation fraction
+
+//     // For V-velocity: shift vertically by +0.5 to align with v-velocity points
+//     let vi = i;
+//     let vj = j + 0.5;
+//     let vi0 = u32(floor(vi));
+//     let vj0 = u32(floor(vj));
+//     let sv_u = vi - f32(vi0); // U-interpolation fraction for v
+//     let sv_v = vj - f32(vj0); // V-interpolation fraction for v
+    
+//     // Sample 4 surrounding velocities for U and V components
+//     // Sample U velocities
+//     let u00 = sampleU(ui0, uj0);
+//     let u10 = sampleU(ui0+1u, uj0);
+//     let u01 = sampleU(ui0, uj0+1u);
+//     let u11 = sampleU(ui0+1u, uj0+1u);
+
+//     // Sample V velocities
+//     let v00 = sampleV(vi0, vj0);
+//     let v10 = sampleV(vi0+1u, vj0);
+//     let v01 = sampleV(vi0, vj0+1u);
+//     let v11 = sampleV(vi0+1u, vj0+1u);
+    
+//     // Same for old grid velocities
+//     let uOld00 = sampleUOld(ui0, uj0);
+//     let uOld10 = sampleUOld(ui0+1u, uj0);
+//     let uOld01 = sampleUOld(ui0, uj0+1u);
+//     let uOld11 = sampleUOld(ui0+1u, uj0+1u);
+
+//     let vOld00 = sampleVOld(vi0, vj0);
+//     let vOld10 = sampleVOld(vi0+1u, vj0);
+//     let vOld01 = sampleVOld(vi0, vj0+1u);
+//     let vOld11 = sampleVOld(vi0+1u, vj0+1u);
+    
+//     // Bilinear interpolation for current grid
+//     let uPIC = mix(mix(u00, u10, su), mix(u01, u11, su), sv);
+//     let vPIC = mix(mix(v00, v10, sv_u), mix(v01, v11, sv_u), sv_v);
+    
+//     // Bilinear interpolation for old grid
+//     let uOldInterp = mix(mix(uOld00, uOld10, su), mix(uOld01, uOld11, su), sv);
+//     let vOldInterp = mix(mix(vOld00, vOld10, sv_u), mix(vOld01, vOld11, sv_u), sv_v);
+    
+//     // Current particle velocity
+//     let oldVel = particleVel[pid].vel;
+    
+//     // FLIP: Transfer velocity change
+//     let uFLIP = oldVel.x + (uPIC - uOldInterp);
+//     let vFLIP = oldVel.y + (vPIC - vOldInterp);
+    
+//     // Blend PIC and FLIP
+//     let newVel = vec2<f32>(
+//         mix(uPIC, uFLIP, pic_flip_ratio),
+//         mix(vPIC, vFLIP, pic_flip_ratio)
+//     );
+    
+//     // Fake viscous dissipation
+//     // Store new velocity
+//     particleVel[pid].vel = newVel * velocity_damping;
+// }
 
 @compute @workgroup_size(256)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
@@ -86,13 +168,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let sv_v = vj - f32(vj0); // V-interpolation fraction for v
     
     // Sample 4 surrounding velocities for U and V components
-    // Sample U velocities
     let u00 = sampleU(ui0, uj0);
     let u10 = sampleU(ui0+1u, uj0);
     let u01 = sampleU(ui0, uj0+1u);
     let u11 = sampleU(ui0+1u, uj0+1u);
 
-    // Sample V velocities
     let v00 = sampleV(vi0, vj0);
     let v10 = sampleV(vi0+1u, vj0);
     let v01 = sampleV(vi0, vj0+1u);
@@ -129,11 +209,37 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         mix(uPIC, uFLIP, pic_flip_ratio),
         mix(vPIC, vFLIP, pic_flip_ratio)
     );
-    
-    // const VISCOSITY_DAMPING = 0.95;
-    // Store new velocity
-    particleVel[pid].vel = newVel * velocity_damping;
+
+    // --- Adaptive velocity damping based on local density ---
+    // Sample density from 4 surrounding cells
+    let di = pos.pos.x * params.world_to_grid_x;
+    let dj = pos.pos.y * params.world_to_grid_y;
+    let di0 = u32(floor(di));
+    let dj0 = u32(floor(dj));
+    let sdi = di - f32(di0);
+    let sdj = dj - f32(dj0);
+
+    let d00 = densityGrid[dj0 * params.size_x + di0];
+    let d10 = densityGrid[dj0 * params.size_x + (di0 + 1u)];
+    let d01 = densityGrid[(dj0 + 1u) * params.size_x + di0];
+    let d11 = densityGrid[(dj0 + 1u) * params.size_x + (di0 + 1u)];
+
+    // Bilinear interpolate density
+    let particleDensity = mix(mix(d00, d10, sdi), mix(d01, d11, sdi), sdj);
+
+    // Calculate adaptive damping
+    let density_ratio = particleDensity / physicsParams.target_density;
+    let adaptive_damping = mix(
+        0.95,                   // Strong damping in low-density regions
+        velocity_damping,       // Default damping at target density
+        clamp(density_ratio, 0.0, 1.0)
+    );
+
+    // Store new velocity with adaptive damping
+    particleVel[pid].vel = newVel * adaptive_damping;
 }
+
+
 
 // Helper functions to sample MAC grid
 fn sampleU(i: u32, j: u32) -> f32 {
@@ -166,11 +272,4 @@ fn sampleVOld(i: u32, j: u32) -> f32 {
         return 0.0;
     }
     return vGridPrev[j * params.size_x + i];
-}
-
-// Simple hash function for randomization
-fn hash(p: f32) -> f32 {
-    var p2 = fract(p * 0.1031);
-    p2 *= p2 + 33.33;
-    return fract((p2 + p2) * p2);
 }

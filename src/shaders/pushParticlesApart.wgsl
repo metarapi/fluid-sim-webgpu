@@ -115,7 +115,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v1 = particleVelIn[pid];
         let v2 = particleVelIn[p2Id];
         let dv = v2 - v1;
-        let viscosity_strength = 0.01; // Tune this value!
+        let viscosity_strength = 0.01; 
         accumulatedViscousDelta += dv * viscosity_strength;
         viscousCount += 1u;
       }
@@ -181,7 +181,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
   let norm_y = rnd_y * 2.0 - 1.0;
   
   // Apply jitter that decreases with each substep
-  let jitter_scale = 0.001 * params.min_dist;
+  let jitter_scale = 0.0001 * params.min_dist;
   jitterX = norm_x * jitter_scale;
   jitterY = norm_y * jitter_scale;
 

@@ -91,7 +91,7 @@ This project builds upon the work and inspiration from several individuals:
 * **Rama C. Hoetzlein** — for GPU sorting logic used as a reference (https://github.com/ramakarl/fluids3)
 * **Emmanuel Roche** — for his WGSL prefix sum implementations and examples (https://github.com/roche-emmanuel/nervland_adventures)
 * **Robert Bridson** — for *Fluid Simulation for Computer Graphics*, which provided detailed theoretical background
-* **Mark Jarzynski and Marc Olano** — for their PCG2D hash function used to add jitter to the particles (*Hash Functions for GPU Rendering, Journal of Computer Graphics Techniques (JCGT)*, vol. 9, no. 3, 20–38, 2020)
+* **Mark Jarzynski and Marc Olano** — for their PCG2D hash function used to add jitter to the particles ([*Hash Functions for GPU Rendering, Journal of Computer Graphics Techniques (JCGT)*, vol. 9, no. 3, 20–38, 2020](https://www.jcgt.org/published/0009/03/02/paper.pdf))
 
 ## Troubleshooting
 

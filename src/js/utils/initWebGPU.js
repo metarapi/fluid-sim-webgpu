@@ -17,11 +17,18 @@ export async function initWebGPU() {
       throw new Error("No appropriate GPU adapter found.");
     }
     
+    // const device = await adapter.requestDevice({
+    //   requiredFeatures: ['shader-f16'],
+    //   requiredLimits: {
+    //     maxComputeWorkgroupStorageSize: 32768,
+    //     maxStorageBufferBindingSize: 1073741824 // 1GB
+    //   }
+    // });
+
     const device = await adapter.requestDevice({
-      requiredFeatures: ['shader-f16'],
       requiredLimits: {
-        maxComputeWorkgroupStorageSize: 32768,
-        maxStorageBufferBindingSize: 1073741824 // 1GB
+        maxComputeWorkgroupStorageSize: 16384,  // 16KB
+        maxStorageBufferBindingSize: 134217728  // 128MB
       }
     });
     

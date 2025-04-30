@@ -14,8 +14,8 @@ export function createConfig(options = {}) {
       gridSizeY: options.gridSizeY || 256,
       
       // World dimensions
-      lengthX: options.lengthX || 16.0,
-      lengthY: options.lengthY || 16.0,
+      lengthX: options.lengthX || 8.0,
+      lengthY: options.lengthY || 8.0,
       
       // Particle configuration (min: 262144, max: 2097152)
       particleCount: options.particleCount || 262144,
@@ -40,7 +40,7 @@ export function createConfig(options = {}) {
     config.gridToWorldY = config.lengthY / config.gridSizeY;
   
   // Override minDistance based on grid cell size
-  config.minDistance = config.gridToWorldX * 1.0;
+  config.minDistance = config.gridToWorldX * 0.9;
 
   // =========================================================
   // Prefix Sum Configuration
@@ -105,7 +105,7 @@ export function createConfig(options = {}) {
     pcg: {
       workgroupCount: pcgWorkgroupCount,
       tolerance: options.pcgTolerance || 1e-5,
-      maxIterations: options.pcgMaxIterations || 500,
+      maxIterations: options.pcgMaxIterations || 100,
       stiffness: options.pressureStiffness || 0.01,
     }
   };

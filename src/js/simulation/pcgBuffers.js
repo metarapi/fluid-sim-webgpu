@@ -12,6 +12,12 @@
       size: numberOfCells * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
     });
+
+    // Density RHS (b vector) - for implicit density projection loop
+    const densityRHS = device.createBuffer({
+      size: numberOfCells * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC
+    });
     
     // Residual (r vector)
     const residual = device.createBuffer({
@@ -78,6 +84,7 @@
     
     return {
       divergence,
+      densityRHS,
       residual,
       searchDirection,
       aux,

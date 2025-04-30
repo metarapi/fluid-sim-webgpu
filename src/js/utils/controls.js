@@ -159,7 +159,7 @@ function setupPhysicsSliders(simState) {
   });
 
   // PCG Iterations
-  setupSlider('pcgIterationsSlider', 'pcgIterationsValue', 50, (value) => {
+  setupSlider('pcgIterationsSlider', 'pcgIterationsValue', 100, (value) => {
     // Update config value directly
     simState.config.pcg.maxIterations = value;
   });

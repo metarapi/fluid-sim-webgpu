@@ -253,9 +253,26 @@ async function initGrids(device, config) {
     const cellTypeArray = new Uint32Array(config.numberOfCells).fill(1); // AIR by default
     const volumeFractionsArray = new Float32Array(numberOfCells).fill(0.0); // 0.0 for solid cells
     
-    // Create buffers for the grids
+    // Create buffers for the grids - p1 (used for grid velocity updates)
     const pressureGrid = device.createBuffer({
       size: pressureData.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+    });
+
+    // p2 (used for particle position correction)
+    const densityPressureGrid = device.createBuffer({
+      size: pressureData.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+    });
+
+    // Add a MAC grid buffer for position corrections
+    const positionCorrectionX = device.createBuffer({
+      size: ((gridSizeX + 1) * gridSizeY) * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+    });
+
+    const positionCorrectionY = device.createBuffer({
+      size: (gridSizeX * (gridSizeY + 1)) * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
@@ -322,6 +339,9 @@ async function initGrids(device, config) {
     return {
       pressureGrid,
       densityGrid,
+      densityPressureGrid,
+      positionCorrectionX,
+      positionCorrectionY,
       uGrid,
       vGrid,
       uGridMask,

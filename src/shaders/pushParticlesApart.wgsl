@@ -115,7 +115,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v1 = particleVelIn[pid];
         let v2 = particleVelIn[p2Id];
         let dv = v2 - v1;
-        let viscosity_strength = 0.01; 
+        let viscosity_strength = 0.01; // Magic number for slight viscosity effect (can't figure out how to add viscous dissipation)
         accumulatedViscousDelta += dv * viscosity_strength;
         viscousCount += 1u;
       }

@@ -9,6 +9,8 @@ This project is a browser-based fluid simulation using WebGPU. It supports both 
 - **Dynamic Configuration**: Adjust grid size and particle count in real time.
 - **Interactive Controls**: Start, pause, step the simulation, and toggle rendering modes.
 - **Prefix Sum & PCG Solver**: Implements a basic prefix sum and pressure solver for fluid dynamics.
+- **Multi-layered Volume Conservation**: Combines implicit density projection with divergence-free velocity fields and particle push-apart for robust volume preservation.
+- **Jittered Particle Distribution**: Uses PCG2D hash function to create natural-looking particle distributions.
 
 ## Tech Stack
 
@@ -66,10 +68,44 @@ Simulation parameters can be modified in the `createConfig` function inside `src
 * `particleCount`: Total number of particles.
 * `pushApartSteps`: Number of separation steps between particles.
 
+## Volume Conservation
+
+This simulation employs a comprehensive multi-layered approach to volume conservation:
+
+### Implicit Density Projection
+The simulation implements the method described in "Implicit Density Projection for Volume Conserving Liquids" (Kugelstadt et al., 2019), which:
+
+- Calculates density deviations from target density
+- Solves a separate pressure equation specifically for density deviations
+- Directly applies position corrections to particles
+- Preserves volume even in long-running simulations
+
+### Density-Adapted Pressure Projection
+The standard pressure solve incorporates density in two ways:
+
+1. **Divergence Source Term**: The divergence calculation includes a density correction term that helps counteract over-dense regions by modifying the right-hand side of the pressure equation.
+   
+2. **Pressure Application**: Velocity updates from pressure gradients are scaled inversely by local density, making pressure forces adaptive to density variations.
+
+These modifications to the traditional pressure solve help maintain proper incompressibility throughout the fluid.
+
+### Particle Push-Apart Method
+Inspired by Matthias Müller's work the simulation also employs a direct particle separation approach that:
+
+- Directly updates particle positions to maintain a minimum separation and prevent overlap (no forces are used).
+- Uses PCG2D hash-based jittering to break symmetry, preventing particles from collapsing into the same point or forming artificial grid patterns.
+- Gradually reduces the magnitude of position corrections over multiple substeps for stable convergence.
+- Includes a simple velocity averaging step between neighbors (intended as a basic non-physical approximation of viscous dissipation)
+- Provides microscopic incompressibility, complementing the macroscopic pressure solvers.
+- Resolves degenerate configurations (such as particle stacking or collapse) that pressure-based methods alone might miss.
+
+These complementary approaches work together to maintain volume conservation at multiple scales - from the microscopic particle level to the macroscopic fluid volume.
+
 ## Controls
 
 * **Start/Pause**: Starts or pauses the simulation loop.
 * **Step**: Runs a single simulation step.
+* **Reset**: Resets the simulation. 
 * **Switch Renderer**: Toggles between grid and particle rendering.
 
 ## Building for Production
@@ -92,6 +128,7 @@ This project builds upon the work and inspiration from several individuals:
 * **Emmanuel Roche** — for his WGSL prefix sum implementations and examples (https://github.com/roche-emmanuel/nervland_adventures)
 * **Robert Bridson** — for *Fluid Simulation for Computer Graphics*, which provided detailed theoretical background
 * **Mark Jarzynski and Marc Olano** — for their PCG2D hash function used to add jitter to the particles ([*Hash Functions for GPU Rendering, Journal of Computer Graphics Techniques (JCGT)*, vol. 9, no. 3, 20–38, 2020](https://www.jcgt.org/published/0009/03/02/paper.pdf))
+* **Tassilo Kugelstadt, Andreas Longva, Nils Thuerey, Jan Bender** - for their implicit density projection ([*Implicit Density Projection for Volume Conserving Liquids, IEEE Transactions on Visualization and Computer Graphics (2019)*](https://ieeexplore.ieee.org/document/8869736))
 
 ## Troubleshooting
 

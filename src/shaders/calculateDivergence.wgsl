@@ -98,7 +98,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let compression = max(0.0, currentDensity - targetDensity);
 
   // Scale factor controls strength of correction
-  let densityCorrection = (correctionStrength) * compression;
+  let densityCorrection = (correctionStrength) * compression * 1.0; // Factor 1.0 is for testing
 
   // Apply density correction
   divergence[idx] = scaled_div - densityCorrection;

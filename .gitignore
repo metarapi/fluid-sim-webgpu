@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 Dockerfile
 .dockerignore
+implicitdensityprojection.cpp
+monolithEncoder copy.js
+.gitignore

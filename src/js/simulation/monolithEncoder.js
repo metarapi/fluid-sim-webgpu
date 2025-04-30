@@ -157,8 +157,210 @@ export async function runMonolithicSimulationStep(state) {
       densityPass.end();
     }
 
-    // Initialize rest density
+    // === STAGE 3.5: IMPLICIT DENSITY PROJECTION ===
+
+    // Clear density pressure grid
+    encoder.clearBuffer(buffers.densityPressureGrid);
+    encoder.clearBuffer(buffers.positionCorrectionX);
+    encoder.clearBuffer(buffers.positionCorrectionY);
+
+    // Calculate RHS for density pressure equation
+    {
+      const densityRHSPass = encoder.beginComputePass();
+      densityRHSPass.setPipeline(pipelines.calculateDensityPressureRHS.pipeline);
+      densityRHSPass.setBindGroup(0, bindGroups.calculateDensityPressureRHS);
+      densityRHSPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      densityRHSPass.end();
+    }
+
+    // Copy density RHS to residual
+    encoder.copyBufferToBuffer(
+      buffers.densityRHS, 0, 
+      buffers.residual, 0, 
+      buffers.densityRHS.size
+    );
+
+    // Apply preconditioner
+    {
+      const precondPass = encoder.beginComputePass();
+      precondPass.setPipeline(pipelines.applyPreconditioner.pipeline);
+      precondPass.setBindGroup(0, bindGroups.densityApplyPreconditioner);
+      precondPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      precondPass.end();
+    }
+
+    // Copy aux to search direction
+    encoder.copyBufferToBuffer(
+      buffers.aux, 0, 
+      buffers.searchDirection, 0, 
+      buffers.aux.size
+    );
+
+    // Calculate initial sigma (r·z)
+    {
+      const dotPass1 = encoder.beginComputePass();
+      dotPass1.setPipeline(pipelines.dotProductPass1.pipeline);
+      dotPass1.setBindGroup(0, bindGroups.dotProductRZ); // Same as in regular PCG
+      dotPass1.dispatchWorkgroups(pcg.workgroupCount);
+      dotPass1.end();
+    }
+
+    {
+      const dotPass2 = encoder.beginComputePass();
+      dotPass2.setPipeline(pipelines.dotProductPass2.pipeline);
+      dotPass2.setBindGroup(0, bindGroups.dotProductPass2); // Same as in regular PCG
+      dotPass2.dispatchWorkgroups(1);
+      dotPass2.end();
+    }
+
+    // Copy initial sigma to PCG params
+    encoder.copyBufferToBuffer(
+      buffers.finalDotProduct, 0, 
+      buffers.pcgParams, 0, 
+      4 // 4 bytes for a float
+    );
+
+    // Density PCG iteration loop
+    const densityPCGIterations = Math.min(pcg.maxIterations, 500);
+    // const densityPCGIterations = 50; // Hardcoded for testing
     
+    // Create a staging buffer for temporary dot product value (reuse the one from regular PCG)
+    const tempDotBuffer = device.createBuffer({
+      size: 4,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+    });
+    
+    // Run PCG iterations for density pressure
+    for (let iter = 0; iter < densityPCGIterations; iter++) {
+      // 1. Apply Laplacian: q = A·p
+      const lapPass = encoder.beginComputePass();
+      lapPass.setPipeline(pipelines.applyLaplacian.pipeline);
+      lapPass.setBindGroup(0, bindGroups.densityApplyLaplacian);
+      lapPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      lapPass.end();
+      
+      // 2. Compute p·q (alpha_denom)
+      const dotPqPass1 = encoder.beginComputePass();
+      dotPqPass1.setPipeline(pipelines.dotProductPass1.pipeline);
+      dotPqPass1.setBindGroup(0, bindGroups.dotProductPQ); // Same as in regular PCG
+      dotPqPass1.dispatchWorkgroups(pcg.workgroupCount);
+      dotPqPass1.end();
+      
+      const dotPqPass2 = encoder.beginComputePass();
+      dotPqPass2.setPipeline(pipelines.dotProductPass2.pipeline);
+      dotPqPass2.setBindGroup(0, bindGroups.dotProductPass2);
+      dotPqPass2.dispatchWorkgroups(1);
+      dotPqPass2.end();
+      
+      // Copy to alpha_denom
+      encoder.copyBufferToBuffer(
+        buffers.finalDotProduct, 0, 
+        buffers.pcgParams, 4, // alpha_denom at offset 4
+        4
+      );
+      
+      // 3. Calculate alpha and update solution+residual
+      const alphaBetaPass = encoder.beginComputePass();
+      alphaBetaPass.setPipeline(pipelines.calculateAlphaBeta.pipeline);
+      alphaBetaPass.setBindGroup(0, bindGroups.calculateAlphaBeta);
+      alphaBetaPass.dispatchWorkgroups(1);
+      alphaBetaPass.end();
+      
+      // 4. Update pressure: x += alpha * p
+      const updateSolnPass = encoder.beginComputePass();
+      updateSolnPass.setPipeline(pipelines.updateSolution.pipeline);
+      updateSolnPass.setBindGroup(0, bindGroups.densityUpdateSolution);
+      updateSolnPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      updateSolnPass.end();
+      
+      // 5. Update residual: r -= alpha * q
+      const updateResidualPass = encoder.beginComputePass();
+      updateResidualPass.setPipeline(pipelines.updateResidual.pipeline);
+      updateResidualPass.setBindGroup(0, bindGroups.densityUpdateResidual);
+      updateResidualPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      updateResidualPass.end();
+      
+      // 6. Apply preconditioner: z = M⁻¹r
+      const precondPass = encoder.beginComputePass();
+      precondPass.setPipeline(pipelines.applyPreconditioner.pipeline);
+      precondPass.setBindGroup(0, bindGroups.densityApplyPreconditioner);
+      precondPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      precondPass.end();
+      
+      // 7. Compute z·r (new_sigma)
+      const dotRzPass1 = encoder.beginComputePass();
+      dotRzPass1.setPipeline(pipelines.dotProductPass1.pipeline);
+      dotRzPass1.setBindGroup(0, bindGroups.dotProductRZ);
+      dotRzPass1.dispatchWorkgroups(pcg.workgroupCount);
+      dotRzPass1.end();
+      
+      const dotRzPass2 = encoder.beginComputePass();
+      dotRzPass2.setPipeline(pipelines.dotProductPass2.pipeline);
+      dotRzPass2.setBindGroup(0, bindGroups.dotProductPass2);
+      dotRzPass2.dispatchWorkgroups(1);
+      dotRzPass2.end();
+      
+      // We need to avoid directly copying from and to the same buffer
+      encoder.copyBufferToBuffer(
+        buffers.finalDotProduct, 0, 
+        tempDotBuffer, 0, 
+        4
+      );
+      
+      encoder.copyBufferToBuffer(
+        tempDotBuffer, 0, 
+        buffers.pcgParams, 16, // new_sigma at offset 16
+        4
+      );
+      
+      // 8. Calculate beta and update search direction
+      const betaPass = encoder.beginComputePass();
+      betaPass.setPipeline(pipelines.calculateAlphaBeta.pipeline);
+      betaPass.setBindGroup(0, bindGroups.calculateAlphaBeta);
+      betaPass.dispatchWorkgroups(1);
+      betaPass.end();
+      
+      // 9. Update search direction: p = z + beta*p
+      const searchDirPass = encoder.beginComputePass();
+      searchDirPass.setPipeline(pipelines.updateSearchDirection.pipeline);
+      searchDirPass.setBindGroup(0, bindGroups.updateSearchDirection);
+      searchDirPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      searchDirPass.end();
+      
+      // 10. sigma = new_sigma for next iteration
+      // We need to avoid direct buffer-to-itself copy
+      encoder.copyBufferToBuffer(
+        buffers.pcgParams, 16, 
+        tempDotBuffer, 0, 
+        4
+      );
+      
+      encoder.copyBufferToBuffer(
+        tempDotBuffer, 0, 
+        buffers.pcgParams, 0, 
+        4
+      );
+    }
+
+    // Calculate position corrections from density pressure gradient
+    {
+      const positionCorrectionPass = encoder.beginComputePass();
+      positionCorrectionPass.setPipeline(pipelines.calculatePositionCorrection.pipeline);
+      positionCorrectionPass.setBindGroup(0, bindGroups.calculatePositionCorrection);
+      positionCorrectionPass.dispatchWorkgroups(Math.ceil(gridSizeX * gridSizeY / 256));
+      positionCorrectionPass.end();
+    }
+
+    // Apply position corrections to particles
+    {
+      const applyPositionCorrectionPass = encoder.beginComputePass();
+      applyPositionCorrectionPass.setPipeline(pipelines.applyPositionCorrection.pipeline);
+      applyPositionCorrectionPass.setBindGroup(0, bindGroups.applyPositionCorrection);
+      applyPositionCorrectionPass.dispatchWorkgroups(Math.ceil(particleCount / 256));
+      applyPositionCorrectionPass.end();
+    }
+
+    // === STAGE 3.7: P2G VELOCITY TRANSFER ===
 
     // Map particle velocities to grid
     encoder.clearBuffer(buffers.uGrid);
@@ -194,22 +396,22 @@ export async function runMonolithicSimulationStep(state) {
       buffers.vGrid.size
     );
 
-    // // Extension passes - each extends one cell further
-    // const numExtensionPasses = 3; // Extend velocity field by 3 cells
-    // for (let pass = 0; pass < numExtensionPasses; pass++) {
-    //   // Each pass must be a separate compute dispatch
-    //   const extendUPass = encoder.beginComputePass();
-    //   extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
-    //   extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
-    //   extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
-    //   extendUPass.end();
+    // Extension passes - each extends one cell further
+    const numExtensionPasses = 3; // Extend velocity field by 3 cells
+    for (let pass = 0; pass < numExtensionPasses; pass++) {
+      // Each pass must be a separate compute dispatch
+      const extendUPass = encoder.beginComputePass();
+      extendUPass.setPipeline(pipelines.extendVelocityU.pipeline);
+      extendUPass.setBindGroup(0, bindGroups.extendVelocityU);
+      extendUPass.dispatchWorkgroups(Math.ceil((gridSizeX+1) * gridSizeY / 256));
+      extendUPass.end();
       
-    //   const extendVPass = encoder.beginComputePass();
-    //   extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
-    //   extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
-    //   extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
-    //   extendVPass.end();
-    // }
+      const extendVPass = encoder.beginComputePass();
+      extendVPass.setPipeline(pipelines.extendVelocityV.pipeline);
+      extendVPass.setBindGroup(0, bindGroups.extendVelocityV);
+      extendVPass.dispatchWorkgroups(Math.ceil(gridSizeX * (gridSizeY+1) / 256));
+      extendVPass.end();
+    }
 
     // // Apply viscosity pass (diffuse grid velocities - Laplacian)
     // {
@@ -312,11 +514,8 @@ export async function runMonolithicSimulationStep(state) {
     // We do fixed number of iterations instead of checking convergence
     const pcgIterations = Math.min(pcg.maxIterations, 500); // Use up to X iterations
 
-    // Create a staging buffer for temporary dot product value
-    const tempDotBuffer = device.createBuffer({
-      size: 4,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-    });
+    // Clear instead
+    encoder.clearBuffer(tempDotBuffer);
     
     // Run the PCG iterations
     for (let iter = 0; iter < pcgIterations; iter++) {

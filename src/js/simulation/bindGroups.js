@@ -24,6 +24,9 @@ export async function initBindGroups(state) {
       // PCG solver bind groups
       ...createPCGBindGroups(device, buffers, pipelines),
 
+      // Density PCG solver bind groups
+      ...createDensityPCGBindGroups(device, buffers, pipelines),
+
       // Transfer and advection bind groups
       ...createTransferAndAdvectionBindGroups(device, buffers, pipelines)
     };
@@ -529,6 +532,105 @@ function createPCGBindGroups(device, buffers, pipelines) {
     computeMaxResidualPass1,
     computeMaxResidualPass2,
     applyPressure
+  };
+}
+
+function createDensityPCGBindGroups(device, buffers, pipelines) {
+  // Create calculateDensityPressureRHS bind group
+  const calculateDensityPressureRHS = device.createBindGroup({
+    layout: pipelines.calculateDensityPressureRHS.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.densityGrid } },
+      { binding: 1, resource: { buffer: buffers.densityRHS } },
+      { binding: 2, resource: { buffer: buffers.physParams } },
+      { binding: 3, resource: { buffer: buffers.cellType } },
+      { binding: 4, resource: { buffer: buffers.simParams } }
+    ]
+  });
+
+  // Create densityApplyPreconditioner bind group
+  const densityApplyPreconditioner = device.createBindGroup({
+    layout: pipelines.applyPreconditioner.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.residual } },
+      { binding: 1, resource: { buffer: buffers.cellType } },
+      { binding: 2, resource: { buffer: buffers.aux } },
+      { binding: 3, resource: { buffer: buffers.simParams } },
+      { binding: 4, resource: { buffer: buffers.volumeFractions } },
+    ]
+  });
+
+  // Create densityApplyLaplacian bind group
+  const densityApplyLaplacian = device.createBindGroup({
+    layout: pipelines.applyLaplacian.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.searchDirection } },
+      { binding: 1, resource: { buffer: buffers.cellType } },
+      { binding: 2, resource: { buffer: buffers.temp } },
+      { binding: 3, resource: { buffer: buffers.simParams } },
+      { binding: 4, resource: { buffer: buffers.volumeFractions } }
+    ]
+  });
+
+  // Create densityUpdateSolution bind group
+  const densityUpdateSolution = device.createBindGroup({
+    layout: pipelines.updateSolution.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.densityPressureGrid } }, // Use p2 instead of p1
+      { binding: 1, resource: { buffer: buffers.searchDirection } },
+      { binding: 2, resource: { buffer: buffers.cellType } },
+      { binding: 3, resource: { buffer: buffers.pcgParams } },
+      { binding: 4, resource: { buffer: buffers.simParams } },
+    ]
+  });
+  
+  // Create densityUpdateResidual bind group
+  const densityUpdateResidual = device.createBindGroup({
+    layout: pipelines.updateResidual.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.residual } },
+      { binding: 1, resource: { buffer: buffers.temp } },
+      { binding: 2, resource: { buffer: buffers.cellType } },
+      { binding: 3, resource: { buffer: buffers.pcgParams } },
+      { binding: 4, resource: { buffer: buffers.simParams } }
+    ]
+  });
+
+  // Create calculatePositionCorrection bind group
+  const calculatePositionCorrection = device.createBindGroup({
+    layout: pipelines.calculatePositionCorrection.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.densityPressureGrid } },
+      { binding: 1, resource: { buffer: buffers.positionCorrectionX } },
+      { binding: 2, resource: { buffer: buffers.positionCorrectionY } },
+      { binding: 3, resource: { buffer: buffers.cellType } },
+      { binding: 4, resource: { buffer: buffers.simParams } },
+    ]
+  });
+
+  // Create applyPositionCorrection bind group
+  const applyPositionCorrection = device.createBindGroup({
+    layout: pipelines.applyPositionCorrection.layout,
+    entries: [
+      { binding: 0, resource: { buffer: buffers.particles.particlePosition } },
+      { binding: 1, resource: { buffer: buffers.positionCorrectionX } },
+      { binding: 2, resource: { buffer: buffers.positionCorrectionY } },
+      { binding: 3, resource: { buffer: buffers.simParams } },
+      { binding: 4, resource: { buffer: buffers.physParams } },
+      { binding: 5, resource: buffers.terrainTexture.createView() },
+      { binding: 6, resource: { buffer: buffers.cellType } },
+    ]
+  });
+
+  // Return all density PCG bind groups
+  return {
+    calculateDensityPressureRHS,
+    densityApplyPreconditioner,
+    densityApplyLaplacian,
+    densityUpdateSolution,
+    densityUpdateResidual,
+    calculatePositionCorrection,
+    applyPositionCorrection
   };
 }
 

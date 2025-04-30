@@ -120,6 +120,10 @@ export async function getShaders() {
       'dotProductPass2',
       'computeMaxResidualPass1',
       'computeMaxResidualPass2',
+      // Density PCG shaders,
+      'calculateDensityPressureRHS',
+      'calculatePositionCorrection',
+      'applyPositionCorrection',
       'gridToParticle',
       'advectParticlesAndHandleCollisions'
     ];

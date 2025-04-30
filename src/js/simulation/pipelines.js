@@ -35,6 +35,9 @@ export async function initPipelines(state) {
         // PCG solver pipelines
         ...await createPCGPipelines(device, shaders),
 
+        // Density PCG solver pipelines
+        ...await createDensityPCGPipelines(device, shaders),
+
         // Transfer and advection pipelines
         ...await createTransferAndAdvectionPipelines(device, shaders)   
     };
@@ -87,6 +90,10 @@ async function loadShaders() {
         'dotProductPass2',
         'computeMaxResidualPass1',
         'computeMaxResidualPass2',
+        // Density PCG shaders,
+        'calculateDensityPressureRHS',
+        'calculatePositionCorrection',
+        'applyPositionCorrection',
         // Grid to particle velocity transfer
         'gridToParticle',
         // Advection
@@ -720,6 +727,86 @@ async function createPCGPipelines(device, shaders) {
       }
     };
   }
+
+/**
+ * Create Density PCG solver related pipelines
+ * @param {GPUDevice} device - WebGPU device
+ * @param {Object} shaders - Loaded shader code
+ * @returns {Object} Density PCG solver pipelines
+ */
+async function createDensityPCGPipelines(device, shaders) {
+  // Create shader modules for all Density PCG shaders
+  const calculateDensityPressureRHSModule = device.createShaderModule({
+    code: shaders.calculateDensityPressureRHS
+  });
+
+  const calculatePositionCorrectionModule = device.createShaderModule({
+    code: shaders.calculatePositionCorrection
+  });
+
+  const applyPositionCorrectionModule = device.createShaderModule({
+    code: shaders.applyPositionCorrection
+  });
+
+  // Create pipelines using auto layout for most shaders
+  const calculateDensityPressureRHS = await device.createComputePipelineAsync({
+    layout: 'auto',
+    compute: { 
+      module: calculateDensityPressureRHSModule, 
+      entryPoint: 'main' 
+    }
+  });
+
+  const calculatePositionCorrection = await device.createComputePipelineAsync({
+    layout: 'auto',
+    compute: { 
+      module: calculatePositionCorrectionModule, 
+      entryPoint: 'main' 
+    }
+  });
+
+  // Create apply position correction pipeline with explicit layout (for texture binding)
+  const applyPositionCorrectionLayout = device.createBindGroupLayout({
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: "storage" } },           // particlePos
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } }, // positionCorrectionX
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } }, // positionCorrectionY
+      { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: "uniform" } },           // simParams
+      { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: "uniform" } },           // physParams
+      { binding: 5, visibility: GPUShaderStage.COMPUTE, texture: {
+          sampleType: 'unfilterable-float',
+          viewDimension: '2d'
+        }
+      },
+      { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } }, // cellType
+    ]
+  });
+
+  const applyPositionCorrection = {
+    pipeline: device.createComputePipeline({
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [applyPositionCorrectionLayout]
+      }),
+      compute: {
+        module: applyPositionCorrectionModule,
+        entryPoint: "main"
+      }
+    }),
+    layout: applyPositionCorrectionLayout
+  };
+
+  return {
+    calculateDensityPressureRHS: {
+      pipeline: calculateDensityPressureRHS,
+      layout: calculateDensityPressureRHS.getBindGroupLayout(0)
+    },
+    calculatePositionCorrection: {
+      pipeline: calculatePositionCorrection,
+      layout: calculatePositionCorrection.getBindGroupLayout(0)
+    },
+    applyPositionCorrection
+  };
+}
 
 /**
  * Create transfer and advection related pipelines

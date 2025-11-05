@@ -46,35 +46,16 @@ export function createConfig(options = {}) {
   // Prefix Sum Configuration
   // =========================================================
   
-  // Hardware optimization constants
+  // Prefix-scan configuration constants
   const WORKGROUP_SIZE = 256;
-  const ELEMENTS_PER_THREAD = 4;  // Vec4 optimization in shader
-  const CELLS_PER_THREAD = 16;    // For PCG reduction
+  const ELEMENTS_PER_THREAD = 4;     // Shader processes vec4<u32>
+  const SCAN_TILE_WIDTH = WORKGROUP_SIZE * ELEMENTS_PER_THREAD; // 1024 scalar elements
+  const CELLS_PER_THREAD = 16;       // For PCG reduction
 
-  // Determine if we need small grid pipeline (for grids smaller than 256x256)
-  const isSmallGrid = numberOfCells < 65536; // 256x256
-
-  // Calculate primary workgroup count (first pass)
-  const numWorkgroups1 = Math.ceil(numberOfCells / (WORKGROUP_SIZE * ELEMENTS_PER_THREAD));
-
-  // For small grids (< 256x256), we only need two passes
-  let numWorkgroups2, numWorkgroups3;
-
-  if (isSmallGrid) {
-    // For small grids, second pass can handle everything in one workgroup
-    numWorkgroups2 = 1;
-    numWorkgroups3 = 0; // No third pass needed
-  } else {
-    // Normal calculation for larger grids
-    numWorkgroups2 = Math.ceil(numWorkgroups1 / WORKGROUP_SIZE);
-    
-    // Calculate third pass workgroup count
-    const workgroupSize3 = Math.ceil(numberOfCells / (WORKGROUP_SIZE * WORKGROUP_SIZE));
-    numWorkgroups3 = Math.ceil(numWorkgroups2 / (workgroupSize3 / 4));
-  }
-
-  // Final pass uses 4x the first pass workgroups (due to Vec4 optimization)
-  const finalPassWorkgroups = numWorkgroups1 * 4;
+  // Pad cell count so the single-pass scan can treat the data as full tiles
+  const paddedCellCount = Math.ceil(numberOfCells / SCAN_TILE_WIDTH) * SCAN_TILE_WIDTH;
+  const vec4Count = paddedCellCount / ELEMENTS_PER_THREAD;
+  const workTiles = Math.max(1, Math.ceil(vec4Count / WORKGROUP_SIZE));
   
   // =========================================================
   // PCG Solver Configuration
@@ -92,13 +73,11 @@ export function createConfig(options = {}) {
     
     // Prefix sum configuration 
     prefixSum: {
-      workgroupSize: WORKGROUP_SIZE,
       elementsPerThread: ELEMENTS_PER_THREAD,
-      isSmallGrid,
-      numWorkgroups1,
-      numWorkgroups2,
-      numWorkgroups3,
-      finalPassWorkgroups
+      paddedCellCount,
+      vec4Count,
+      workTiles,
+      tileWidth: SCAN_TILE_WIDTH
     },
     
     // PCG solver configuration

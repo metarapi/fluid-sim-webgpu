@@ -52,50 +52,32 @@ export async function runMonolithicSimulationStep(state) {
     }
   
     // === STAGE 2: PREFIX SUM COMPUTATION ===
+    encoder.clearBuffer(buffers.scanBump);
+    encoder.clearBuffer(buffers.scanSpine);
+
     {
       const prefixSumPass = encoder.beginComputePass();
-      
-      // First pass - process grid cells in chunks (always needed)
-      prefixSumPass.setPipeline(pipelines.prefixSumFirstPass.pipeline);
-      prefixSumPass.setBindGroup(0, bindGroups.prefixSumFirstPass);
-      prefixSumPass.dispatchWorkgroups(prefixSum.numWorkgroups1);
-      
-      if (prefixSum.isSmallGrid) {
-        // For small grids: Second pass using the Third pass shader
-        // (This pass handles the final summing for small grids)
-        prefixSumPass.setPipeline(pipelines.prefixSumThirdPass.pipeline);
-        prefixSumPass.setBindGroup(0, bindGroups.prefixSumThirdPass);
-        prefixSumPass.dispatchWorkgroups(1);
-        
-        // Use the simplified downsweep pass for small grids
-        prefixSumPass.setPipeline(pipelines.prefixSumFinalPassSmall.pipeline);
-        prefixSumPass.setBindGroup(0, bindGroups.prefixSumFinalPassSmall);
-        prefixSumPass.dispatchWorkgroups(prefixSum.finalPassWorkgroups);
-      } else {
-        // For larger grids: Standard three-pass approach
-        
-        // Second pass - process intermediate results
-        prefixSumPass.setPipeline(pipelines.prefixSumFirstPass.pipeline);
-        prefixSumPass.setBindGroup(0, bindGroups.prefixSumSecondPass);
-        prefixSumPass.dispatchWorkgroups(prefixSum.numWorkgroups2);
-        
-        // Third pass - process second pass results
-        prefixSumPass.setPipeline(pipelines.prefixSumThirdPass.pipeline);
-        prefixSumPass.setBindGroup(0, bindGroups.prefixSumThirdPass);
-        prefixSumPass.dispatchWorkgroups(prefixSum.numWorkgroups3);
-        
-        // Final pass - combine all results with the full downsweep
-        prefixSumPass.setPipeline(pipelines.prefixSumFinalPass.pipeline);
-        prefixSumPass.setBindGroup(0, bindGroups.prefixSumFinalPass);
-        prefixSumPass.dispatchWorkgroups(prefixSum.finalPassWorkgroups);
-      }
-      
-      // Add guard element (needed for both small and large grids)
-      prefixSumPass.setPipeline(pipelines.addGuard.pipeline);
-      prefixSumPass.setBindGroup(0, bindGroups.addGuard);
-      prefixSumPass.dispatchWorkgroups(1);
-      
+      prefixSumPass.setPipeline(pipelines.prefixSumScan.pipeline);
+      prefixSumPass.setBindGroup(0, bindGroups.prefixSumScan);
+      prefixSumPass.dispatchWorkgroups(Math.max(1, prefixSum.workTiles));
       prefixSumPass.end();
+    }
+
+    if (config.numberOfCells > 0) {
+      encoder.copyBufferToBuffer(
+        buffers.firstCellParticle,
+        (config.numberOfCells - 1) * 4,
+        buffers.scanScratch,
+        0,
+        4
+      );
+      encoder.copyBufferToBuffer(
+        buffers.scanScratch,
+        0,
+        buffers.firstCellParticle,
+        config.numberOfCells * 4,
+        4
+      );
     }
     
     // === STAGE 3: PARTICLE HANDLING AND MAPPING ===

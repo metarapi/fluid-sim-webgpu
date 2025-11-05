@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/fluid-sim-webgpu/',
+  // base: '/fluid-sim-webgpu/',
   plugins: [
     tailwindcss(),
   ],

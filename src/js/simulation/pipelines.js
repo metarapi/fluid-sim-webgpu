@@ -60,11 +60,7 @@ async function loadShaders() {
         'markSolid',
         'markLiquid',
         'particleToCellMapping',
-        'prefixSumUpsweepPass12',
-        'prefixSumUpsweepPass3',
-        'prefixSumDownsweepPass',
-        'prefixSumDownsweepPassSmall',
-        'addGuard',
+        'csdldf',
         'particleIdAssign',
         'pushParticlesApart',
         'terrainCollision',
@@ -362,84 +358,36 @@ async function createParticlePipelines(device, shaders) {
  * @returns {Object} Prefix sum pipelines
  */
 async function createPrefixSumPipelines(device, shaders) {
-    // Create shader modules
-    const prefixSumPass12Module = device.createShaderModule({
-        code: shaders.prefixSumUpsweepPass12
-    });
+  const csdldfModule = device.createShaderModule({
+    code: shaders.csdldf
+  });
 
-    const prefixSumPass3Module = device.createShaderModule({
-        code: shaders.prefixSumUpsweepPass3
-    });
+  const prefixSumBindGroupLayout = device.createBindGroupLayout({
+    entries: [
+    { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
+    { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } },
+    { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }
+    ]
+  });
 
-    const prefixSumDownsweepModule = device.createShaderModule({
-        code: shaders.prefixSumDownsweepPass
-    });
+  const prefixSumPipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [prefixSumBindGroupLayout]
+  });
 
-    const prefixSumDownsweepSmallModule = device.createShaderModule({
-      code: shaders.prefixSumDownsweepPassSmall
-    });
+  const prefixSumPipeline = device.createComputePipeline({
+    layout: prefixSumPipelineLayout,
+    compute: { module: csdldfModule, entryPoint: 'main' }
+  });
 
-    const addGuardModule = device.createShaderModule({
-        code: shaders.addGuard
-    });
-
-    // Create pipelines using auto layout
-    const firstPass = await device.createComputePipelineAsync({
-        layout: 'auto',
-        compute: { module: prefixSumPass12Module, entryPoint: 'main' }
-    });
-
-    const secondPass = await device.createComputePipelineAsync({
-        layout: "auto",
-        compute: { module: prefixSumPass12Module, entryPoint: "main" },
-    });
-
-    const thirdPass = await device.createComputePipelineAsync({
-        layout: 'auto',
-        compute: { module: prefixSumPass3Module, entryPoint: 'main' }
-    });
-
-    const finalPass = await device.createComputePipelineAsync({
-        layout: 'auto',
-        compute: { module: prefixSumDownsweepModule, entryPoint: 'main' }
-    });
-
-    const finalPassSmall = await device.createComputePipelineAsync({
-        layout: 'auto',
-        compute: { module: prefixSumDownsweepSmallModule, entryPoint: 'main' }
-    });
-
-    const addGuard = await device.createComputePipelineAsync({
-        layout: 'auto',
-        compute: { module: addGuardModule, entryPoint: 'main' }
-    });
-
-    return {
-        prefixSumFirstPass: {
-            pipeline: firstPass,
-            layout: firstPass.getBindGroupLayout(0)
-        },
-        prefixSumSecondPass: {
-          pipeline: secondPass,
-          layout: secondPass.getBindGroupLayout(0)
-        },
-        prefixSumThirdPass: {
-            pipeline: thirdPass,
-            layout: thirdPass.getBindGroupLayout(0)
-        },
-        prefixSumFinalPass: {
-            pipeline: finalPass,
-            layout: finalPass.getBindGroupLayout(0)
-        },
-        prefixSumFinalPassSmall: {
-            pipeline: finalPassSmall,
-            layout: finalPassSmall.getBindGroupLayout(0)
-        },
-        addGuard: {
-            pipeline: addGuard,
-            layout: addGuard.getBindGroupLayout(0)
-        }
-    };
+  return {
+    prefixSumScan: {
+    pipeline: prefixSumPipeline,
+    layout: prefixSumBindGroupLayout
+    }
+  };
 }
 
 /**

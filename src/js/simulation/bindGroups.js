@@ -177,72 +177,20 @@ export async function initBindGroups(state) {
    * @returns {Object} Prefix sum bind groups
    */
   function createPrefixSumBindGroups(device, buffers, pipelines, config) {
-    const { prefixSum } = config;
-    
-    // Create first pass bind group (processes input data)
-    const prefixSumFirstPass = device.createBindGroup({
-      layout: pipelines.prefixSumFirstPass.layout,
+    const prefixSumScan = device.createBindGroup({
+      layout: pipelines.prefixSumScan.layout,
       entries: [
-        { binding: 0, resource: { buffer: buffers.numCellParticles } },   // inputBuffer
-        { binding: 1, resource: { buffer: buffers.firstCellParticle } },  // outputBuffer1
-        { binding: 2, resource: { buffer: buffers.intermediateBuffer1 } }
-      ]
-    });
-    
-    // Create second pass bind group (processes first pass results)
-    const prefixSumSecondPass = device.createBindGroup({
-      layout: pipelines.prefixSumFirstPass.layout,
-      entries: [
-        { binding: 0, resource: { buffer: buffers.intermediateBuffer1 } },
-        { binding: 1, resource: { buffer: buffers.outputBuffer2 } },
-        { binding: 2, resource: { buffer: buffers.intermediateBuffer2 } }
-      ]
-    });
-
-    // Create third pass bind group (processes second pass results)
-    const prefixSumThirdPass = device.createBindGroup({
-      layout: pipelines.prefixSumThirdPass.layout,
-      entries: [
-        { binding: 0, resource: { buffer: buffers.intermediateBuffer2 } },
-        { binding: 1, resource: { buffer: buffers.outputBuffer3 } }
-      ]
-    });
-    
-    // Create final pass bind group (downsweep)
-    const prefixSumFinalPass = device.createBindGroup({
-      layout: pipelines.prefixSumFinalPass.layout,
-      entries: [
-        { binding: 0, resource: { buffer: buffers.outputBuffer2 } },  // From pass 2
-        { binding: 1, resource: { buffer: buffers.outputBuffer3 } },  // From pass 3
-        { binding: 2, resource: { buffer: buffers.firstCellParticle } },  // To update
-      ]
-    });
-
-    // Create final pass bind group for small grids (downsweep)
-    const prefixSumFinalPassSmall = device.createBindGroup({
-      layout: pipelines.prefixSumFinalPassSmall.layout,
-      entries: [
-        { binding: 0, resource: { buffer: buffers.outputBuffer2 } },
-        { binding: 1, resource: { buffer: buffers.firstCellParticle } }
-      ]
-    });
-    
-    // Create add guard bind group
-    const addGuard = device.createBindGroup({
-      layout: pipelines.addGuard.layout,
-      entries: [
-        { binding: 0, resource: { buffer: buffers.firstCellParticle } },
-        { binding: 1, resource: { buffer: buffers.simParams } }
+        { binding: 0, resource: { buffer: buffers.scanParams } },
+        { binding: 1, resource: { buffer: buffers.numCellParticles } },
+        { binding: 2, resource: { buffer: buffers.firstCellParticle } },
+        { binding: 3, resource: { buffer: buffers.scanBump } },
+        { binding: 4, resource: { buffer: buffers.scanSpine } },
+        { binding: 5, resource: { buffer: buffers.scanScratch } }
       ]
     });
     
     return {
-      prefixSumFirstPass,
-      prefixSumSecondPass,
-      prefixSumThirdPass,
-      prefixSumFinalPass,
-      prefixSumFinalPassSmall,
-      addGuard
+      prefixSumScan
     };
   }
   

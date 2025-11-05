@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 Dockerfile
+csdldf.html
 .dockerignore
 implicitdensityprojection.cpp
 monolithEncoder copy.js

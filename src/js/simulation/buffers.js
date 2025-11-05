@@ -361,47 +361,56 @@ async function initGrids(device, config) {
  */
 async function initPrefixSumBuffers(device, config) {
     const { numberOfCells, particleCount, prefixSum } = config;
-    
-    // Get workgroup sizes from configuration
-    const { workgroupSize, numWorkgroups1, numWorkgroups2, numWorkgroups3 } = prefixSum;
-       
-    // Initialize numCellParticles buffer with zeros (this is the inputBuffer for prefix sum)
-    const numCellParticles = new Uint32Array(numberOfCells).fill(0);
+    const { paddedCellCount, vec4Count, workTiles } = prefixSum;
+
+    // Initialize numCellParticles buffer with padding for the single-pass scan
+    const numCellParticles = new Uint32Array(paddedCellCount).fill(0);
     const numCellParticlesBuffer = device.createBuffer({
       size: numCellParticles.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
     device.queue.writeBuffer(numCellParticlesBuffer, 0, numCellParticles);
-    
-    // Initialize the firstCellParticle buffer with zeros (this is the outputBuffer1 for prefix sum)
-    const firstCellParticle = new Uint32Array(numberOfCells + 1).fill(0); // +1 for the guard element
+
+    // Initialize the prefix-sum output buffer (+1 slot reserved for the guard value)
+    const firstCellParticle = new Uint32Array(paddedCellCount + 1).fill(0);
     const firstCellParticleBuffer = device.createBuffer({
       size: firstCellParticle.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
     device.queue.writeBuffer(firstCellParticleBuffer, 0, firstCellParticle);
-    
-    // Create intermediate buffers for prefix sum algorithm
-    const intermediateBuffer1 = device.createBuffer({
-      size: numWorkgroups1 * 4 * 4, // numWorkgroups1 * vec4 * 4 bytes
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+
+    // Parameters buffer consumed by the CSDLDF scan shader
+    const scanParamsData = new Uint32Array([paddedCellCount, vec4Count, workTiles, 0]);
+    const scanParamsBuffer = device.createBuffer({
+      size: scanParamsData.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    
-    const outputBuffer2 = device.createBuffer({
-      size: numWorkgroups1 * 4 * 4, // Same as intermediateBuffer1
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    device.queue.writeBuffer(scanParamsBuffer, 0, scanParamsData);
+
+    // Atomic counter buffer used by the scan implementation
+    const scanBumpBuffer = device.createBuffer({
+      size: 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
-    
-    const intermediateBuffer2 = device.createBuffer({
-      size: numWorkgroups2 * 4 * 4, // numWorkgroups2 * vec4 * 4 bytes
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    device.queue.writeBuffer(scanBumpBuffer, 0, new Uint32Array([0]));
+
+    // Spine buffer stores per-tile partial aggregates
+    const spineEntries = Math.max(1, workTiles) * 2;
+    const spineInit = new Uint32Array(spineEntries).fill(0);
+    const scanSpineBuffer = device.createBuffer({
+      size: Math.max(8, spineInit.byteLength),
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
-    
-    const outputBuffer3 = device.createBuffer({
-      size: numWorkgroups2 * 4 * 4, // Same as intermediateBuffer2
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    if (spineInit.byteLength > 0) {
+      device.queue.writeBuffer(scanSpineBuffer, 0, spineInit);
+    }
+
+    // Scratch buffer required by shader signature (unused data path)
+    const scanScratchBuffer = device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
-    
+
     // Create particle ID assignment buffer
     const cellParticleIds = new Int32Array(particleCount).fill(-1);
     const cellParticleIdsBuffer = device.createBuffer({
@@ -413,10 +422,10 @@ async function initPrefixSumBuffers(device, config) {
     return {
       numCellParticles: numCellParticlesBuffer,
       firstCellParticle: firstCellParticleBuffer,
-      intermediateBuffer1,
-      outputBuffer2,
-      intermediateBuffer2,
-      outputBuffer3,
+      scanParams: scanParamsBuffer,
+      scanBump: scanBumpBuffer,
+      scanSpine: scanSpineBuffer,
+      scanScratch: scanScratchBuffer,
       cellParticleIds: cellParticleIdsBuffer
     };
   }

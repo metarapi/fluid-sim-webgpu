@@ -8,7 +8,7 @@ This project is a browser-based fluid simulation using WebGPU. It supports both 
 - **Two Rendering Modes**: Switch between particle-based and grid-based visualization.
 - **Dynamic Configuration**: Adjust grid size and particle count in real time.
 - **Interactive Controls**: Start, pause, step the simulation, and toggle rendering modes.
-- **Prefix Sum & PCG Solver**: Implements a basic prefix sum and pressure solver for fluid dynamics.
+- **Prefix Sum & PCG Solver**: Implements a high-performance, single-pass inclusive prefix sum (scan) using the CSDLDF algorithm with WebGPU subgroups, and a pressure solver for fluid dynamics.
 - **Multi-layered Volume Conservation**: Combines implicit density projection with divergence-free velocity fields and particle push-apart for robust volume preservation.
 - **Jittered Particle Distribution**: Uses PCG2D hash function to create natural-looking particle distributions.
 
@@ -22,6 +22,9 @@ This project uses:
 - [`vite-plugin-glsl`](https://www.npmjs.com/package/vite-plugin-glsl) to load `.wgsl` shader files
 - [Bootstrap Icons](https://icons.getbootstrap.com) for user interface icons
 - [flyonui](https://flyonui.com/), used solely for custom scrollbar styling
+
+**WebGPU Requirements:**
+- Requires a browser and GPU supporting the `subgroups` feature (used for the single-pass prefix sum/scan). Most modern discrete GPUs and recent Chromium-based browsers support this, but some integrated GPUs or older drivers may not.
 
 ## Installation
 
@@ -129,12 +132,13 @@ This project builds upon the work and inspiration from several individuals:
 * **Robert Bridson** — for *Fluid Simulation for Computer Graphics*, which provided detailed theoretical background
 * **Mark Jarzynski and Marc Olano** — for their PCG2D hash function used to add jitter to the particles ([*Hash Functions for GPU Rendering, Journal of Computer Graphics Techniques (JCGT)*, vol. 9, no. 3, 20–38, 2020](https://www.jcgt.org/published/0009/03/02/paper.pdf))
 * **Tassilo Kugelstadt, Andreas Longva, Nils Thuerey, Jan Bender** - for their implicit density projection ([*Implicit Density Projection for Volume Conserving Liquids, IEEE Transactions on Visualization and Computer Graphics (2019)*](https://ieeexplore.ieee.org/document/8869736))
+* **Thomas Smith, John D. Owens, Raph Levien** - for their prefix sum shader. ([*Decoupled Fallback: A Portable Single-Pass GPU Scan*](https://doi.org/10.1145/3694906.3743326))
 
 ## Troubleshooting
 
-* Ensure your browser supports WebGPU (Chrome Canary or recent versions of Chromium-based browsers).
-* Check the developer console for error messages.
-* Make sure all dependencies are installed correctly.
+- Ensure your browser supports WebGPU **with the `subgroups` feature** (see browser and GPU requirements above).
+- Check the developer console for error messages.
+- Make sure all dependencies are installed correctly.
 
 If you're stuck, feel free to open an issue in the repository.
 

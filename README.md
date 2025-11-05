@@ -1,6 +1,6 @@
 # Fluid Simulation with WebGPU
 
-This project is a browser-based fluid simulation using WebGPU. It supports both particle-based and grid-based rendering modes. While it's functional and visually interesting, it's not fully optimized and performance will vary depending on your GPU and browser.
+This project is a browser-based fluid simulation using WebGPU. It supports both particle-based and grid-based rendering modes. While it's functional and visually interesting, it's not fully optimized and performance will vary depending on your GPU and browser. [Try it here.](https://metarapi.github.io/fluid-sim-webgpu/)
 
 ## Features
 
